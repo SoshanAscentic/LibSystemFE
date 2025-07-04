@@ -1,10 +1,11 @@
 import { Demo } from "@/components/Demo"
 import { Toaster } from "@/components/ui/sonner"
+import { AuthDemo } from "./components/AuthDemo"
 
 function App() {
   return (
     <>
-      <Demo />
+      <AuthDemo />
       <Toaster position="top-right" richColors />
     </>
   )
