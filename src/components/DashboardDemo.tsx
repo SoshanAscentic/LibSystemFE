@@ -11,7 +11,7 @@ export function DashboardDemo() {
   const handleLogin = (loginData: any) => {
     // Simulate successful login
     setUser({
-      name: "John Doe",
+      name: "Soshan Wijayarathne",
       email: loginData.email,
       role: "Administrator"
     })

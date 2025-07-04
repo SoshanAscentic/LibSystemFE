@@ -28,7 +28,7 @@ export function SearchBar({
   debounceMs = 300,
 }: SearchBarProps) {
   const [internalValue, setInternalValue] = React.useState(value)
-  const debounceTimer = React.useRef<NodeJS.Timeout>()
+  const debounceTimer = React.useRef<NodeJS.Timeout | undefined>(undefined)
 
   React.useEffect(() => {
     setInternalValue(value)

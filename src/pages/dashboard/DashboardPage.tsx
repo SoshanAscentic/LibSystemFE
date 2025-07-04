@@ -20,7 +20,7 @@ export interface DashboardPageProps {
 
 export function DashboardPage({ 
   user = {
-    name: "John Doe",
+    name: "Soshan Wijayarathne",
     email: "john@library.com", 
     role: "Administrator"
   },
@@ -150,7 +150,7 @@ export function DashboardPage({
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
           <StatsCard
             title="Total Books"
             value={stats.totalBooks}

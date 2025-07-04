@@ -43,7 +43,7 @@ export function Header({
   onToggleSidebar,
   isSidebarOpen = false,
   user = {
-    name: "John Doe",
+    name: "Soshan Wijayarathne",
     email: "john@library.com",
     role: "Administrator"
   },

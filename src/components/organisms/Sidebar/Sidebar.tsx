@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Button } from "@/components/atoms/Button"
 import { cn } from "@/lib/utils"
-import { 
+import {
   Home,
   BookOpen,
   Users,
@@ -18,7 +18,7 @@ export interface SidebarProps {
   onNavigate?: (path: string) => void
   userRole?: string
   className?: string
-  onItemClick?: () => void // Add this to close mobile sidebar on navigation
+  onItemClick?: () => void
 }
 
 interface MenuItem {
@@ -34,66 +34,66 @@ const menuItems: MenuItem[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
-    icon: <Home className="w-5 h-5 flex-shrink-0" />,
+    icon: <Home className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/dashboard'
   },
   {
     id: 'books',
     label: 'Books',
-    icon: <BookOpen className="w-5 h-5 flex-shrink-0" />,
+    icon: <BookOpen className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/books',
     children: [
-      { id: 'all-books', label: 'All Books', icon: <BookOpen className="w-4 h-4 flex-shrink-0" />, path: '/books' },
-      { id: 'add-book', label: 'Add Book', icon: <BookOpen className="w-4 h-4 flex-shrink-0" />, path: '/books/add', roles: ['ManagementStaff', 'Administrator'] },
-      { id: 'categories', label: 'Categories', icon: <BookOpen className="w-4 h-4 flex-shrink-0" />, path: '/books/categories' }
+      { id: 'all-books', label: 'All Books', icon: <BookOpen className="w-4 h-4 flex-shrink-0 text-black" />, path: '/books' },
+      { id: 'add-book', label: 'Add Book', icon: <BookOpen className="w-4 h-4 flex-shrink-0 text-black" />, path: '/books/add', roles: ['ManagementStaff', 'Administrator'] },
+      { id: 'categories', label: 'Categories', icon: <BookOpen className="w-4 h-4 flex-shrink-0 text-black" />, path: '/books/categories' }
     ]
   },
   {
     id: 'members',
     label: 'Members',
-    icon: <Users className="w-5 h-5 flex-shrink-0" />,
+    icon: <Users className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/members',
     roles: ['MinorStaff', 'ManagementStaff', 'Administrator'],
     children: [
-      { id: 'all-members', label: 'All Members', icon: <Users className="w-4 h-4 flex-shrink-0" />, path: '/members' },
-      { id: 'add-member', label: 'Add Member', icon: <Users className="w-4 h-4 flex-shrink-0" />, path: '/members/add', roles: ['Administrator'] }
+      { id: 'all-members', label: 'All Members', icon: <Users className="w-4 h-4 flex-shrink-0 text-black" />, path: '/members' },
+      { id: 'add-member', label: 'Add Member', icon: <Users className="w-4 h-4 flex-shrink-0 text-black" />, path: '/members/add', roles: ['Administrator'] }
     ]
   },
   {
     id: 'borrowing',
     label: 'Borrowing',
-    icon: <RotateCcw className="w-5 h-5 flex-shrink-0" />,
+    icon: <RotateCcw className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/borrowing',
     children: [
-      { id: 'active-loans', label: 'Active Loans', icon: <RotateCcw className="w-4 h-4 flex-shrink-0" />, path: '/borrowing/active' },
-      { id: 'borrow-book', label: 'Borrow Book', icon: <RotateCcw className="w-4 h-4 flex-shrink-0" />, path: '/borrowing/borrow' },
-      { id: 'return-book', label: 'Return Book', icon: <RotateCcw className="w-4 h-4 flex-shrink-0" />, path: '/borrowing/return' },
-      { id: 'history', label: 'History', icon: <RotateCcw className="w-4 h-4 flex-shrink-0" />, path: '/borrowing/history' }
+      { id: 'active-loans', label: 'Active Loans', icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, path: '/borrowing/active' },
+      { id: 'borrow-book', label: 'Borrow Book', icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, path: '/borrowing/borrow' },
+      { id: 'return-book', label: 'Return Book', icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, path: '/borrowing/return' },
+      { id: 'history', label: 'History', icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, path: '/borrowing/history' }
     ]
   },
   {
     id: 'analytics',
     label: 'Analytics',
-    icon: <BarChart3 className="w-5 h-5 flex-shrink-0" />,
+    icon: <BarChart3 className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/analytics',
     roles: ['MinorStaff', 'ManagementStaff', 'Administrator']
   },
   {
     id: 'admin',
     label: 'Administration',
-    icon: <UserCog className="w-5 h-5 flex-shrink-0" />,
+    icon: <UserCog className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/admin',
     roles: ['Administrator'],
     children: [
-      { id: 'users', label: 'User Management', icon: <UserCog className="w-4 h-4 flex-shrink-0" />, path: '/admin/users' },
-      { id: 'system', label: 'System Settings', icon: <Settings className="w-4 h-4 flex-shrink-0" />, path: '/admin/settings' }
+      { id: 'users', label: 'User Management', icon: <UserCog className="w-4 h-4 flex-shrink-0 text-black" />, path: '/admin/users' },
+      { id: 'system', label: 'System Settings', icon: <Settings className="w-4 h-4 flex-shrink-0 text-black" />, path: '/admin/settings' }
     ]
   }
 ]
 
-export function Sidebar({ 
-  currentPath = '/dashboard', 
-  onNavigate, 
+export function Sidebar({
+  currentPath = '/dashboard',
+  onNavigate,
   userRole = 'Member',
   className,
   onItemClick
@@ -106,8 +106,8 @@ export function Sidebar({
   }
 
   const toggleExpanded = (itemId: string) => {
-    setExpandedItems(prev => 
-      prev.includes(itemId) 
+    setExpandedItems(prev =>
+      prev.includes(itemId)
         ? prev.filter(id => id !== itemId)
         : [...prev, itemId]
     )
@@ -119,7 +119,7 @@ export function Sidebar({
 
   const handleNavigation = (path: string) => {
     onNavigate?.(path)
-    onItemClick?.() // Close mobile sidebar
+    onItemClick?.()
   }
 
   const renderMenuItem = (item: MenuItem, level = 0) => {
@@ -136,6 +136,7 @@ export function Sidebar({
           className={cn(
             "w-full justify-start gap-3 text-left h-10 px-3",
             level > 0 && "ml-6 w-auto",
+            !isItemActive && "text-black",
             isItemActive && "bg-[var(--color-secondary-light)] text-[var(--color-secondary)] border-r-2 border-[var(--color-secondary)]"
           )}
           onClick={() => {
@@ -152,9 +153,9 @@ export function Sidebar({
           </div>
           {hasChildren && (
             <div className="flex-shrink-0">
-              {isExpanded ? 
-                <ChevronDown className="w-4 h-4" /> : 
-                <ChevronRight className="w-4 h-4" />
+              {isExpanded ?
+                <ChevronDown className="w-4 h-4 text-black" /> :
+                <ChevronRight className="w-4 h-4 text-black" />
               }
             </div>
           )}
@@ -175,14 +176,13 @@ export function Sidebar({
         {menuItems.map(item => renderMenuItem(item))}
       </div>
 
-      {/* Profile Section */}
       <div className="pt-4 mt-6 border-t border-[var(--color-gray-200)]">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 px-3"
+          className="w-full justify-start gap-3 px-3 text-black"
           onClick={() => handleNavigation('/profile')}
         >
-          <Settings className="w-5 h-5 flex-shrink-0" />
+          <Settings className="w-5 h-5 flex-shrink-0 text-black" />
           <span className="truncate">Profile & Settings</span>
         </Button>
       </div>

@@ -40,7 +40,7 @@ export function QuickActions({
     {
       id: 'borrow-book',
       label: 'Borrow Book',
-      description: 'Check out a book from the library',
+      description: '',
       icon: <RotateCcw className="w-5 h-5 flex-shrink-0" />,
       variant: 'default',
       onClick: () => onBorrowBook?.()
@@ -48,7 +48,7 @@ export function QuickActions({
     {
       id: 'return-book', 
       label: 'Return Book',
-      description: 'Return a borrowed book',
+      description: '',
       icon: <RotateCcw className="w-5 h-5 flex-shrink-0" />,
       variant: 'outline',
       onClick: () => onReturnBook?.()
@@ -56,7 +56,7 @@ export function QuickActions({
     {
       id: 'search-books',
       label: 'Search Books',
-      description: 'Find books in the catalog',
+      description: '',
       icon: <Search className="w-5 h-5 flex-shrink-0" />,
       variant: 'secondary',
       onClick: () => onSearchBooks?.()
@@ -64,7 +64,7 @@ export function QuickActions({
     {
       id: 'add-book',
       label: 'Add Book',
-      description: 'Add a new book to the catalog',
+      description: '',
       icon: <Plus className="w-5 h-5 flex-shrink-0" />,
       variant: 'default',
       onClick: () => onAddBook?.(),
@@ -73,7 +73,7 @@ export function QuickActions({
     {
       id: 'add-member',
       label: 'Add Member',
-      description: 'Register a new library member',
+      description: '',
       icon: <UserPlus className="w-5 h-5 flex-shrink-0" />,
       variant: 'outline',
       onClick: () => onAddMember?.(),
@@ -82,7 +82,7 @@ export function QuickActions({
     {
       id: 'view-analytics',
       label: 'View Analytics',
-      description: 'Check library statistics and reports',
+      description: '',
       icon: <BarChart3 className="w-5 h-5 flex-shrink-0" />,
       variant: 'secondary',
       onClick: () => onViewAnalytics?.(),
@@ -106,7 +106,7 @@ export function QuickActions({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-7">
           {availableActions.map((action) => (
             <Button
               key={action.id}
