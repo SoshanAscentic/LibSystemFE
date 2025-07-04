@@ -6,12 +6,16 @@ import type { RegisterFormData } from "@/components/organisms/RegisterForm"
 
 type AuthView = 'login' | 'register'
 
-export function AuthDemo() {
+export interface AuthDemoProps {
+  onLoginSuccess?: (data: LoginFormData) => void
+}
+
+export function AuthDemo({ onLoginSuccess }: AuthDemoProps) {
   const [currentView, setCurrentView] = React.useState<AuthView>('login')
 
   const handleLogin = (data: LoginFormData) => {
     console.log('Login attempt:', data)
-    // In a real app, this would redirect to the dashboard
+    onLoginSuccess?.(data)
   }
 
   const handleRegister = (data: RegisterFormData) => {
