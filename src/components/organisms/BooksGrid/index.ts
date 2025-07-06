@@ -1,1 +1,1 @@
-export { BookForm } from './BookForm';
+export { BooksGrid } from './BooksGrid';

@@ -1,4 +1,3 @@
-export { BookFilters } from '../BookFilters';
 import React from 'react';
 import { Book } from '../../../services/api/types';
 import { BookCard } from '../BookCard';

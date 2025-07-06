@@ -1,7 +1,9 @@
 import * as React from "react"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/atoms/Button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/molecules/Card"
 import { BookOpen, Users, RotateCcw, Plus, Search, BarChart3, UserPlus } from "lucide-react"
+import { toast } from "sonner"
 
 export interface QuickAction {
   id: string
@@ -27,65 +29,88 @@ export interface QuickActionsProps {
 
 export function QuickActions({
   userRole = 'Member',
-  onAddBook,
-  onBorrowBook,
-  onReturnBook,
-  onAddMember,
-  onSearchBooks,
-  onViewAnalytics,
   className
 }: QuickActionsProps) {
+  const navigate = useNavigate()
+
+  const handleAddBook = () => {
+    navigate('/books/add')
+  }
+
+  const handleSearchBooks = () => {
+    navigate('/books')
+  }
+
+  const handleBorrowBook = () => {
+    // TODO: Navigate to borrowing page when implemented
+    toast.info('Borrow Book feature coming in Phase 6!')
+  }
+
+  const handleReturnBook = () => {
+    // TODO: Navigate to return page when implemented  
+    toast.info('Return Book feature coming in Phase 6!')
+  }
+
+  const handleAddMember = () => {
+    // TODO: Navigate to add member page when implemented
+    toast.info('Add Member feature coming in Phase 5!')
+  }
+
+  const handleViewAnalytics = () => {
+    // TODO: Navigate to analytics page when implemented
+    toast.info('Analytics feature coming in Phase 8!')
+  }
   
   const actions: QuickAction[] = [
     {
-      id: 'borrow-book',
-      label: 'Borrow Book',
-      description: '',
-      icon: <RotateCcw className="w-5 h-5 flex-shrink-0" />,
-      variant: 'default',
-      onClick: () => onBorrowBook?.()
-    },
-    {
-      id: 'return-book', 
-      label: 'Return Book',
-      description: '',
-      icon: <RotateCcw className="w-5 h-5 flex-shrink-0" />,
-      variant: 'outline',
-      onClick: () => onReturnBook?.()
-    },
-    {
       id: 'search-books',
-      label: 'Search Books',
-      description: '',
+      label: 'Browse Books',
+      description: 'View and search all books',
       icon: <Search className="w-5 h-5 flex-shrink-0" />,
-      variant: 'secondary',
-      onClick: () => onSearchBooks?.()
+      variant: 'default',
+      onClick: handleSearchBooks
     },
     {
       id: 'add-book',
       label: 'Add Book',
-      description: '',
+      description: 'Add new book to library',
       icon: <Plus className="w-5 h-5 flex-shrink-0" />,
-      variant: 'default',
-      onClick: () => onAddBook?.(),
+      variant: 'outline',
+      onClick: handleAddBook,
       roles: ['ManagementStaff', 'Administrator']
+    },
+    {
+      id: 'borrow-book',
+      label: 'Borrow Book',
+      description: 'Check out a book',
+      icon: <RotateCcw className="w-5 h-5 flex-shrink-0" />,
+      variant: 'secondary',
+      onClick: handleBorrowBook
+    },
+    {
+      id: 'return-book', 
+      label: 'Return Book',
+      description: 'Return a borrowed book',
+      icon: <RotateCcw className="w-5 h-5 flex-shrink-0" />,
+      variant: 'outline',
+      onClick: handleReturnBook
     },
     {
       id: 'add-member',
       label: 'Add Member',
-      description: '',
+      description: 'Register new member',
       icon: <UserPlus className="w-5 h-5 flex-shrink-0" />,
-      variant: 'outline',
-      onClick: () => onAddMember?.(),
+      variant: 'secondary',
+      onClick: handleAddMember,
       roles: ['Administrator']
     },
     {
       id: 'view-analytics',
       label: 'View Analytics',
-      description: '',
+      description: 'Library statistics',
       icon: <BarChart3 className="w-5 h-5 flex-shrink-0" />,
-      variant: 'secondary',
-      onClick: () => onViewAnalytics?.(),
+      variant: 'outline',
+      onClick: handleViewAnalytics,
       roles: ['MinorStaff', 'ManagementStaff', 'Administrator']
     }
   ]
@@ -106,7 +131,7 @@ export function QuickActions({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-7">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-3">
           {availableActions.map((action) => (
             <Button
               key={action.id}

@@ -1,4 +1,6 @@
+// src/components/organisms/Sidebar/Sidebar.tsx
 import * as React from "react"
+import { useNavigate, useLocation } from "react-router-dom"
 import { Button } from "@/components/atoms/Button"
 import { cn } from "@/lib/utils"
 import {
@@ -12,6 +14,7 @@ import {
   ChevronDown,
   ChevronRight
 } from "lucide-react"
+import { toast } from "sonner"
 
 export interface SidebarProps {
   currentPath?: string
@@ -28,6 +31,7 @@ interface MenuItem {
   path: string
   roles?: string[]
   children?: MenuItem[]
+  implemented?: boolean
 }
 
 const menuItems: MenuItem[] = [
@@ -35,17 +39,31 @@ const menuItems: MenuItem[] = [
     id: 'dashboard',
     label: 'Dashboard',
     icon: <Home className="w-5 h-5 flex-shrink-0 text-black" />,
-    path: '/dashboard'
+    path: '/dashboard',
+    implemented: true
   },
   {
     id: 'books',
     label: 'Books',
     icon: <BookOpen className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/books',
+    implemented: true,
     children: [
-      { id: 'all-books', label: 'All Books', icon: <BookOpen className="w-4 h-4 flex-shrink-0 text-black" />, path: '/books' },
-      { id: 'add-book', label: 'Add Book', icon: <BookOpen className="w-4 h-4 flex-shrink-0 text-black" />, path: '/books/add', roles: ['ManagementStaff', 'Administrator'] },
-      { id: 'categories', label: 'Categories', icon: <BookOpen className="w-4 h-4 flex-shrink-0 text-black" />, path: '/books/categories' }
+      { 
+        id: 'all-books', 
+        label: 'All Books', 
+        icon: <BookOpen className="w-4 h-4 flex-shrink-0 text-black" />, 
+        path: '/books',
+        implemented: true
+      },
+      { 
+        id: 'add-book', 
+        label: 'Add Book', 
+        icon: <BookOpen className="w-4 h-4 flex-shrink-0 text-black" />, 
+        path: '/books/add', 
+        roles: ['ManagementStaff', 'Administrator'],
+        implemented: true
+      }
     ]
   },
   {
@@ -54,9 +72,23 @@ const menuItems: MenuItem[] = [
     icon: <Users className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/members',
     roles: ['MinorStaff', 'ManagementStaff', 'Administrator'],
+    implemented: false,
     children: [
-      { id: 'all-members', label: 'All Members', icon: <Users className="w-4 h-4 flex-shrink-0 text-black" />, path: '/members' },
-      { id: 'add-member', label: 'Add Member', icon: <Users className="w-4 h-4 flex-shrink-0 text-black" />, path: '/members/add', roles: ['Administrator'] }
+      { 
+        id: 'all-members', 
+        label: 'All Members', 
+        icon: <Users className="w-4 h-4 flex-shrink-0 text-black" />, 
+        path: '/members',
+        implemented: false
+      },
+      { 
+        id: 'add-member', 
+        label: 'Add Member', 
+        icon: <Users className="w-4 h-4 flex-shrink-0 text-black" />, 
+        path: '/members/add', 
+        roles: ['Administrator'],
+        implemented: false
+      }
     ]
   },
   {
@@ -64,11 +96,36 @@ const menuItems: MenuItem[] = [
     label: 'Borrowing',
     icon: <RotateCcw className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/borrowing',
+    implemented: false,
     children: [
-      { id: 'active-loans', label: 'Active Loans', icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, path: '/borrowing/active' },
-      { id: 'borrow-book', label: 'Borrow Book', icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, path: '/borrowing/borrow' },
-      { id: 'return-book', label: 'Return Book', icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, path: '/borrowing/return' },
-      { id: 'history', label: 'History', icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, path: '/borrowing/history' }
+      { 
+        id: 'active-loans', 
+        label: 'Active Loans', 
+        icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, 
+        path: '/borrowing/active',
+        implemented: false
+      },
+      { 
+        id: 'borrow-book', 
+        label: 'Borrow Book', 
+        icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, 
+        path: '/borrowing/borrow',
+        implemented: false
+      },
+      { 
+        id: 'return-book', 
+        label: 'Return Book', 
+        icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, 
+        path: '/borrowing/return',
+        implemented: false
+      },
+      { 
+        id: 'history', 
+        label: 'History', 
+        icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, 
+        path: '/borrowing/history',
+        implemented: false
+      }
     ]
   },
   {
@@ -76,7 +133,8 @@ const menuItems: MenuItem[] = [
     label: 'Analytics',
     icon: <BarChart3 className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/analytics',
-    roles: ['MinorStaff', 'ManagementStaff', 'Administrator']
+    roles: ['MinorStaff', 'ManagementStaff', 'Administrator'],
+    implemented: false
   },
   {
     id: 'admin',
@@ -84,20 +142,33 @@ const menuItems: MenuItem[] = [
     icon: <UserCog className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/admin',
     roles: ['Administrator'],
+    implemented: false,
     children: [
-      { id: 'users', label: 'User Management', icon: <UserCog className="w-4 h-4 flex-shrink-0 text-black" />, path: '/admin/users' },
-      { id: 'system', label: 'System Settings', icon: <Settings className="w-4 h-4 flex-shrink-0 text-black" />, path: '/admin/settings' }
+      { 
+        id: 'users', 
+        label: 'User Management', 
+        icon: <UserCog className="w-4 h-4 flex-shrink-0 text-black" />, 
+        path: '/admin/users',
+        implemented: false
+      },
+      { 
+        id: 'system', 
+        label: 'System Settings', 
+        icon: <Settings className="w-4 h-4 flex-shrink-0 text-black" />, 
+        path: '/admin/settings',
+        implemented: false
+      }
     ]
   }
 ]
 
 export function Sidebar({
-  currentPath = '/dashboard',
-  onNavigate,
   userRole = 'Member',
   className,
   onItemClick
 }: SidebarProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [expandedItems, setExpandedItems] = React.useState<string[]>(['books', 'borrowing'])
 
   const hasPermission = (roles?: string[]) => {
@@ -114,12 +185,25 @@ export function Sidebar({
   }
 
   const isActive = (path: string) => {
-    return currentPath === path || currentPath.startsWith(path + '/')
+    return location.pathname === path || location.pathname.startsWith(path + '/')
   }
 
-  const handleNavigation = (path: string) => {
-    onNavigate?.(path)
-    onItemClick?.()
+  const handleNavigation = (path: string, implemented?: boolean, label?: string) => {
+    if (implemented) {
+      navigate(path)
+      onItemClick?.()
+    } else {
+      const featurePhase = getFeaturePhase(path)
+      toast.info(`${label} feature coming in ${featurePhase}!`)
+    }
+  }
+
+  const getFeaturePhase = (path: string): string => {
+    if (path.startsWith('/members')) return 'Phase 5'
+    if (path.startsWith('/borrowing')) return 'Phase 6'
+    if (path.startsWith('/analytics')) return 'Phase 8'
+    if (path.startsWith('/admin')) return 'Phase 7'
+    return 'a future update'
   }
 
   const renderMenuItem = (item: MenuItem, level = 0) => {
@@ -143,13 +227,18 @@ export function Sidebar({
             if (hasChildren) {
               toggleExpanded(item.id)
             } else {
-              handleNavigation(item.path)
+              handleNavigation(item.path, item.implemented, item.label)
             }
           }}
         >
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {item.icon}
             <span className="truncate">{item.label}</span>
+            {!item.implemented && level === 0 && (
+              <span className="text-xs bg-orange-100 text-orange-600 px-1 rounded">
+                Soon
+              </span>
+            )}
           </div>
           {hasChildren && (
             <div className="flex-shrink-0">
@@ -180,10 +269,13 @@ export function Sidebar({
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 px-3 text-black"
-          onClick={() => handleNavigation('/profile')}
+          onClick={() => handleNavigation('/profile', false, 'Profile & Settings')}
         >
           <Settings className="w-5 h-5 flex-shrink-0 text-black" />
           <span className="truncate">Profile & Settings</span>
+          <span className="text-xs bg-orange-100 text-orange-600 px-1 rounded">
+            Soon
+          </span>
         </Button>
       </div>
     </div>
