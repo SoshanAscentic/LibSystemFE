@@ -1,7 +1,8 @@
+//src/application/controllers/AuthController.ts
 import { ControllerResult } from '../../shared/interfaces/common';
 import { INavigationService, INotificationService } from '../../shared/interfaces/services';
 
-// For now, this is a placeholder since we don't have full auth implementation
+// For now, this is a placeholder since don't have full auth implementation
 export interface LoginData {
   email: string;
   password: string;
@@ -30,19 +31,28 @@ export class AuthController {
       
       // Demo login logic
       if (data.email === "admin@library.com" && data.password === "admin123") {
+        // Mock token - in real app, this would come from your API
+        const mockToken = 'mock-jwt-token-' + Date.now();
+        
+        const userData = {
+          userId: 1,
+          email: data.email,
+          name: "Soshan Wijayarathne",
+          role: "Administrator"
+        };
+
+        // Store auth data in localStorage
+        localStorage.setItem('authToken', mockToken);
+        localStorage.setItem('user', JSON.stringify(userData));
+
         this.notificationService.showSuccess(
           'Welcome back!',
           'You have successfully signed in to your account.'
         );
         
-        this.navigationService.navigateToDashboard();
+        // Navigate will happen automatically due to auth state change
         
-        return ControllerResult.success({
-          userId: 1,
-          email: data.email,
-          name: "Soshan Wijayarathne",
-          role: "Administrator"
-        });
+        return ControllerResult.success(userData);
       } else {
         this.notificationService.showError(
           'Invalid credentials',
@@ -96,7 +106,17 @@ export class AuthController {
   }
 
   handleLogout(): ControllerResult {
+    // Clear auth data
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    
     this.notificationService.showInfo('Goodbye!', 'You have been logged out.');
+    
+    // Force page reload to reset authentication state
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 1000);
+    
     return ControllerResult.success();
   }
 }

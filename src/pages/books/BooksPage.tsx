@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useBooks } from '../../hooks/api/useBooks';
-import { useBooksSearch } from '../../hooks/api/useBooksSearch';
-import { useCreateBook, useUpdateBook, useDeleteBook } from '../../hooks/api/useBooks';
-import { BookFilters as BookFiltersType, CreateBookDto, Book } from '../../services/api/types';
+import { BooksController } from '../../application/controllers/BooksController';
+import { Book } from '../../domain/entities/Book';
+import { BookFilters as BookFiltersType } from '../../domain/valueObjects/BookFilters';
+import { CreateBookDto } from '../../domain/dtos/CreateBookDto';
 import { BooksGrid } from '../../components/organisms/BooksGrid';
 import { BooksTable } from '../../components/organisms/BooksTable';
 import { BookForm } from '../../components/organisms/BookForm';
@@ -14,10 +14,11 @@ import { Card } from '../../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { ConfirmDialog } from '../../components/ui/confirm-dialog';
 import { Grid, List, Search, X } from 'lucide-react';
-import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
+import { useBooks } from '../../presentation/hooks/useBooks';
+import { useBooksSearch } from '../../presentation/hooks/useBooksSearch';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
-import { bookToCreateBookDto } from '../../utils/bookUtils'; // Import the transformer
+import { bookToCreateBookDto } from '../../utils/bookUtils';
 
 type ViewMode = 'grid' | 'table';
 type ModalType = 'add' | 'edit' | 'view' | 'delete' | null;
@@ -27,34 +28,33 @@ interface ModalState {
   book?: Book;
 }
 
-export const BooksPage: React.FC = () => {
+interface BooksPageProps {
+  controller: BooksController;
+}
+
+export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
+  // UI State
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [filters, setFilters] = useState<BookFiltersType>({});
   const [modal, setModal] = useState<ModalState>({ type: null });
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get user permissions
+  // Permissions
   const permissions = useUserPermissions();
 
-  // API hooks
-  const { data: books = [], isLoading: booksLoading } = useBooks(filters);
-  const createBookMutation = useCreateBook();
-  const updateBookMutation = useUpdateBook();
-  const deleteBookMutation = useDeleteBook();
-
-  // Search functionality
+  // Data hooks
+  const { books, isLoading: booksLoading, refresh: refreshBooks } = useBooks(filters);
   const {
     searchQuery,
     setSearchQuery,
     searchResults,
     isSearching,
     hasSearchQuery,
-    filters: searchFilters,
-    updateFilters: updateSearchFilters,
-    clearFilters: clearSearchFilters
+    clearSearch
   } = useBooksSearch();
 
-  // Handlers
+  // Event Handlers
   const handleFiltersChange = (newFilters: Partial<BookFiltersType>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
@@ -66,8 +66,7 @@ export const BooksPage: React.FC = () => {
   const handleSearchToggle = () => {
     setIsSearchMode(!isSearchMode);
     if (isSearchMode) {
-      setSearchQuery('');
-      clearSearchFilters();
+      clearSearch();
     }
   };
 
@@ -88,46 +87,60 @@ export const BooksPage: React.FC = () => {
   };
 
   const handleBookBorrow = (book: Book) => {
-    // Navigate to borrowing page or open borrow modal
-    toast.info(`Borrowing functionality for "${book.title}" will be implemented in Phase 6`);
+    // Will be implemented in Phase 6
+    controller.handleNavigateToBooks();
   };
 
   const handleCreateBook = async (data: CreateBookDto) => {
-    try {
-      await createBookMutation.mutateAsync(data);
+    setIsSubmitting(true);
+    
+    const result = await controller.handleCreateBook(data);
+    
+    setIsSubmitting(false);
+    
+    if (result.success) {
       setModal({ type: null });
-    } catch (error) {
-      // Error handled by mutation
+      refreshBooks();
     }
   };
 
   const handleUpdateBook = async (data: CreateBookDto) => {
     if (!modal.book) return;
     
-    try {
-      await updateBookMutation.mutateAsync({ 
-        id: modal.book.bookId, 
-        data 
-      });
+    setIsSubmitting(true);
+    
+    const result = await controller.handleUpdateBook(modal.book.bookId, {
+      ...data,
+      bookId: modal.book.bookId
+    });
+    
+    setIsSubmitting(false);
+    
+    if (result.success) {
       setModal({ type: null });
-    } catch (error) {
-      // Error handled by mutation
+      refreshBooks();
     }
   };
 
   const handleConfirmDelete = async () => {
     if (!modal.book) return;
     
-    try {
-      await deleteBookMutation.mutateAsync(modal.book.bookId);
+    setIsSubmitting(true);
+    
+    const result = await controller.handleDeleteBook(modal.book);
+    
+    setIsSubmitting(false);
+    
+    if (result.success) {
       setModal({ type: null });
-    } catch (error) {
-      // Error handled by mutation
+      refreshBooks();
     }
   };
 
   const closeModal = () => {
-    setModal({ type: null });
+    if (!isSubmitting) {
+      setModal({ type: null });
+    }
   };
 
   const currentBooks = isSearchMode && hasSearchQuery ? searchResults : books;
@@ -243,7 +256,7 @@ export const BooksPage: React.FC = () => {
 
       {/* Modals */}
       
-      {/* Add/Edit Book Modal - FIXED */}
+      {/* Add/Edit Book Modal */}
       <Dialog open={modal.type === 'add' || modal.type === 'edit'} onOpenChange={closeModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -252,10 +265,10 @@ export const BooksPage: React.FC = () => {
             </DialogTitle>
           </DialogHeader>
           <BookForm
-            initialData={modal.book ? bookToCreateBookDto(modal.book) : undefined} // ✅ FIXED: Transform Book to CreateBookDto
+            initialData={modal.book ? bookToCreateBookDto(modal.book) : undefined}
             onSubmit={modal.type === 'add' ? handleCreateBook : handleUpdateBook}
             onCancel={closeModal}
-            isLoading={createBookMutation.isPending || updateBookMutation.isPending}
+            isLoading={isSubmitting}
             title={modal.type === 'add' ? 'Add New Book' : 'Edit Book'}
             submitText={modal.type === 'add' ? 'Add Book' : 'Update Book'}
           />
@@ -291,7 +304,7 @@ export const BooksPage: React.FC = () => {
             : ''
         }
         confirmText="Delete Book"
-        isLoading={deleteBookMutation.isPending}
+        isLoading={isSubmitting}
         variant="destructive"
       />
     </div>

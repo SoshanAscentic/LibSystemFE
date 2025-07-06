@@ -1,38 +1,44 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useBook } from '../../hooks/api/useBooks';
+import { BooksController } from '../../application/controllers/BooksController';
 import { BookDetails } from '../../components/organisms/BookDetails';
 import { LoadingState } from '../../components/molecules/LoadingState';
 import { EmptyState } from '../../components/molecules/EmptyState';
 import { Button } from '../../components/ui/button';
 import { ArrowLeft, BookOpen } from 'lucide-react';
-import { Book } from '../../services/api/types';
-import { useUserPermissions } from '../../hooks/useUserPermissions'; 
+import { useBook } from '../../presentation/hooks/useBook';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
 
-export const BookDetailsPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const bookId = parseInt(id || '0', 10);
+interface BookDetailsPageProps {
+  bookId: number;
+  controller: BooksController;
+}
 
-  const { data: book, isLoading, error } = useBook(bookId);
-  const permissions = useUserPermissions(); 
+export const BookDetailsPage: React.FC<BookDetailsPageProps> = ({ bookId, controller }) => {
+  const { book, isLoading, error } = useBook(bookId);
+  const permissions = useUserPermissions();
 
   const handleBack = () => {
-    navigate('/books');
+    controller.handleNavigateBack();
   };
 
-  const handleEdit = (book: Book) => {
-    navigate(`/books/${book.bookId}/edit`);
+  const handleEdit = () => {
+    if (book) {
+      // Navigate to edit page - this could be enhanced
+      controller.handleNavigateToBooks();
+    }
   };
 
-  const handleDelete = (book: Book) => {
-    // Implement delete logic
-    console.log('Delete book:', book);
+  const handleDelete = async () => {
+    if (book) {
+      await controller.handleDeleteBook(book);
+    }
   };
 
-  const handleBorrow = (book: Book) => {
-    // Navigate to borrow page
-    navigate(`/borrowing/borrow?bookId=${book.bookId}`);
+  const handleBorrow = () => {
+    if (book) {
+      // Will be implemented in Phase 6
+      console.log('Borrow book:', book);
+    }
   };
 
   if (isLoading) {

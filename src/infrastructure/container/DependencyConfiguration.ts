@@ -6,6 +6,8 @@ import { NavigationServiceImpl } from '../services/NavigationServiceImpl';
 import { NotificationService } from '../services/NotificationService';
 import { BookService } from '../../domain/services/BookService';
 import { BookValidationService } from '../../domain/services/BookValidationService';
+import { BooksController } from '../../application/controllers/BooksController';
+import { AuthController } from '../../application/controllers/AuthController';
 
 export const configureDependencies = (container: Container, navigate: (path: string | number) => void): void => {
   // Infrastructure layer
@@ -35,12 +37,19 @@ export const configureDependencies = (container: Container, navigate: (path: str
     )
   );
 
-  // Application controllers will be created on-demand
+  // Application controllers - Fixed to use proper imports
   container.register(SERVICE_KEYS.BOOKS_CONTROLLER, () => 
-    new (require('../../application/controllers/BooksController').BooksController)(
+    new BooksController(
       container.resolve(SERVICE_KEYS.BOOK_SERVICE),
       container.resolve(SERVICE_KEYS.NAVIGATION_SERVICE),
       container.resolve(SERVICE_KEYS.NOTIFICATION_SERVICE)
+    )
+  );
+
+  container.register(SERVICE_KEYS.AUTH_CONTROLLER, () => 
+    new AuthController(
+      container.resolve(SERVICE_KEYS.NAVIGATION_SERVICE),
+      container.resolve(SERVICE_KEYS.NOTIFICATION_SERVICE),
     )
   );
 };

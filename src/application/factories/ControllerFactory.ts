@@ -7,17 +7,10 @@ export class ControllerFactory {
   constructor(private container: Container) {}
 
   createBooksController(): BooksController {
-    return new BooksController(
-      this.container.resolve(SERVICE_KEYS.BOOK_SERVICE),
-      this.container.resolve(SERVICE_KEYS.NAVIGATION_SERVICE),
-      this.container.resolve(SERVICE_KEYS.NOTIFICATION_SERVICE)
-    );
+    return this.container.resolve<BooksController>(SERVICE_KEYS.BOOKS_CONTROLLER);
   }
 
   createAuthController(): AuthController {
-    return new AuthController(
-      this.container.resolve(SERVICE_KEYS.NAVIGATION_SERVICE),
-      this.container.resolve(SERVICE_KEYS.NOTIFICATION_SERVICE)
-    );
+    return this.container.resolve<AuthController>(SERVICE_KEYS.AUTH_CONTROLLER);
   }
 }

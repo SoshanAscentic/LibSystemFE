@@ -1,26 +1,25 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useCreateBook } from '../../hooks/api/useBooks';
-import { CreateBookDto } from '../../services/api/types';
+import React, { useState } from 'react';
+import { BooksController } from '../../application/controllers/BooksController';
+import { CreateBookDto } from '../../domain/dtos/CreateBookDto';
 import { BookForm } from '../../components/organisms/BookForm';
 import { Button } from '../../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
-export const CreateBookPage: React.FC = () => {
-  const navigate = useNavigate();
-  const createBookMutation = useCreateBook();
+interface CreateBookPageProps {
+  controller: BooksController;
+}
+
+export const CreateBookPage: React.FC<CreateBookPageProps> = ({ controller }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
-    navigate('/books');
+    controller.handleNavigateToBooks();
   };
 
   const handleSubmit = async (data: CreateBookDto) => {
-    try {
-      const result = await createBookMutation.mutateAsync(data);
-      navigate(`/books/${result.data.bookId}`);
-    } catch (error) {
-      // Error handled by mutation
-    }
+    setIsSubmitting(true);
+    await controller.handleCreateBook(data);
+    setIsSubmitting(false);
   };
 
   return (
@@ -38,7 +37,7 @@ export const CreateBookPage: React.FC = () => {
         <BookForm
           onSubmit={handleSubmit}
           onCancel={handleBack}
-          isLoading={createBookMutation.isPending}
+          isLoading={isSubmitting}
           title="Add New Book"
           submitText="Add Book"
         />

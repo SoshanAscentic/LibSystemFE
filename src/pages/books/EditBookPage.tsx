@@ -1,32 +1,37 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useBook, useUpdateBook } from '../../hooks/api/useBooks';
-import { CreateBookDto } from '../../services/api/types';
+import React, { useState } from 'react';
+import { BooksController } from '../../application/controllers/BooksController';
+import { CreateBookDto } from '../../domain/dtos/CreateBookDto';
 import { BookForm } from '../../components/organisms/BookForm';
 import { LoadingState } from '../../components/molecules/LoadingState';
 import { EmptyState } from '../../components/molecules/EmptyState';
 import { Button } from '../../components/ui/button';
 import { ArrowLeft, BookOpen } from 'lucide-react';
+import { useBook } from '../../presentation/hooks/useBook';
 import { bookToCreateBookDto } from '../../utils/bookUtils';
 
-export const EditBookPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const bookId = parseInt(id || '0', 10);
+interface EditBookPageProps {
+  bookId: number;
+  controller: BooksController;
+}
 
-  const { data: book, isLoading, error } = useBook(bookId);
-  const updateBookMutation = useUpdateBook();
+export const EditBookPage: React.FC<EditBookPageProps> = ({ bookId, controller }) => {
+  const { book, isLoading, error } = useBook(bookId);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
-    navigate(`/books/${bookId}`);
+    controller.handleViewBook(book!);
   };
 
   const handleSubmit = async (data: CreateBookDto) => {
-    try {
-      await updateBookMutation.mutateAsync({ id: bookId, data });
-      navigate(`/books/${bookId}`);
-    } catch (error) {
-      // Error handled by mutation
+    setIsSubmitting(true);
+    const result = await controller.handleUpdateBook(bookId, {
+      ...data,
+      bookId
+    });
+    setIsSubmitting(false);
+    
+    if (result.success) {
+      handleBack();
     }
   };
 
@@ -37,7 +42,7 @@ export const EditBookPage: React.FC = () => {
   if (error || !book) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate('/books')}>
+        <Button variant="ghost" onClick={() => controller.handleNavigateToBooks()}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Books
         </Button>
@@ -48,7 +53,7 @@ export const EditBookPage: React.FC = () => {
           description="The book you're trying to edit doesn't exist."
           action={{
             label: "Return to Books",
-            onClick: () => navigate('/books')
+            onClick: () => controller.handleNavigateToBooks()
           }}
         />
       </div>
@@ -68,10 +73,10 @@ export const EditBookPage: React.FC = () => {
       {/* Form */}
       <div className="max-w-2xl">
         <BookForm
-          initialData={bookToCreateBookDto(book)} 
+          initialData={bookToCreateBookDto(book)}
           onSubmit={handleSubmit}
           onCancel={handleBack}
-          isLoading={updateBookMutation.isPending}
+          isLoading={isSubmitting}
           title={`Edit "${book.title}"`}
           submitText="Update Book"
         />
