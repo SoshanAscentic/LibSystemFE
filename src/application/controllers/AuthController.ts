@@ -1,15 +1,14 @@
-//src/application/controllers/AuthController.ts
 import { ControllerResult } from '../../shared/interfaces/common';
 import { INavigationService, INotificationService } from '../../shared/interfaces/services';
+import { AuthenticationService, LoginCredentials, RegisterData } from '../../domain/services/AuthenticationService';
 
-// For now, this is a placeholder since don't have full auth implementation
 export interface LoginData {
   email: string;
   password: string;
   rememberMe: boolean;
 }
 
-export interface RegisterData {
+export interface RegisterFormData {
   firstName: string;
   lastName: string;
   email: string;
@@ -20,103 +19,212 @@ export interface RegisterData {
 
 export class AuthController {
   constructor(
+    private authenticationService: AuthenticationService,
     private navigationService: INavigationService,
     private notificationService: INotificationService
   ) {}
 
   async handleLogin(data: LoginData): Promise<ControllerResult> {
     try {
-      // Simulate API call - replace with actual auth service
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const credentials: LoginCredentials = {
+        email: data.email,
+        password: data.password,
+        rememberMe: data.rememberMe
+      };
+
+      const result = await this.authenticationService.login(credentials);
       
-      // Demo login logic
-      if (data.email === "admin@library.com" && data.password === "admin123") {
-        // Mock token - in real app, this would come from your API
-        const mockToken = 'mock-jwt-token-' + Date.now();
-        
-        const userData = {
-          userId: 1,
-          email: data.email,
-          name: "Soshan Wijayarathne",
-          role: "Administrator"
-        };
-
-        // Store auth data in localStorage
-        localStorage.setItem('authToken', mockToken);
-        localStorage.setItem('user', JSON.stringify(userData));
-
+      if (result.isSuccess) {
         this.notificationService.showSuccess(
           'Welcome back!',
-          'You have successfully signed in to your account.'
+          `Hello ${result.value.user.firstName}, you have successfully signed in.`
         );
         
-        // Navigate will happen automatically due to auth state change
+        this.navigationService.navigateToDashboard();
         
-        return ControllerResult.success(userData);
+        return ControllerResult.success(result.value.user);
       } else {
+        const errorMessage = this.getErrorMessage(result.error.message);
         this.notificationService.showError(
-          'Invalid credentials',
-          'Please check your email and password and try again.'
+          'Login Failed',
+          errorMessage
         );
         
-        return ControllerResult.failure('Invalid credentials');
+        return ControllerResult.failure(result.error.message);
       }
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = 'An unexpected error occurred. Please try again.';
       this.notificationService.showError(
-        'Login failed',
-        'An unexpected error occurred. Please try again.'
+        'Login Failed',
+        errorMessage
       );
       
-      return ControllerResult.failure('Login failed');
+      return ControllerResult.failure(errorMessage);
     }
   }
 
-  async handleRegister(data: RegisterData): Promise<ControllerResult> {
+  async handleRegister(data: RegisterFormData): Promise<ControllerResult> {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      this.notificationService.showSuccess(
-        'Account created successfully!',
-        'Welcome to LibraryMS. You can now sign in with your credentials.'
-      );
-      
-      return ControllerResult.success({
-        userId: Date.now(),
+      const registerData: RegisterData = {
+        firstName: data.firstName,
+        lastName: data.lastName,
         email: data.email,
-        name: `${data.firstName} ${data.lastName}`,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
         role: data.role
-      });
+      };
+
+      const result = await this.authenticationService.register(registerData);
       
-    } catch (error) {
+      if (result.isSuccess) {
+        this.notificationService.showSuccess(
+          'Account Created Successfully!',
+          `Welcome to LibraryMS, ${result.value.user.firstName}! You can now access all features.`
+        );
+        
+        this.navigationService.navigateToDashboard();
+        
+        return ControllerResult.success(result.value.user);
+      } else {
+        const errorMessage = this.getErrorMessage(result.error.message);
+        this.notificationService.showError(
+          'Registration Failed',
+          errorMessage
+        );
+        
+        return ControllerResult.failure(result.error.message);
+      }
+    } catch (error: any) {
+      const errorMessage = 'An unexpected error occurred. Please try again.';
       this.notificationService.showError(
-        'Registration failed',
-        'An unexpected error occurred. Please try again.'
+        'Registration Failed',
+        errorMessage
       );
       
-      return ControllerResult.failure('Registration failed');
+      return ControllerResult.failure(errorMessage);
     }
   }
 
-  handleForgotPassword(): void {
-    this.notificationService.showInfo(
-      'Forgot Password',
-      'Password reset functionality will be available soon.'
-    );
+  async handleForgotPassword(email: string): Promise<ControllerResult> {
+    try {
+      const result = await this.authenticationService.requestPasswordReset(email);
+      
+      if (result.isSuccess) {
+        this.notificationService.showSuccess(
+          'Password Reset Requested',
+          'If an account with that email exists, you will receive password reset instructions.'
+        );
+        
+        return ControllerResult.success();
+      } else {
+        const errorMessage = this.getErrorMessage(result.error.message);
+        this.notificationService.showError(
+          'Password Reset Failed',
+          errorMessage
+        );
+        
+        return ControllerResult.failure(result.error.message);
+      }
+    } catch (error: any) {
+      const errorMessage = 'An unexpected error occurred. Please try again.';
+      this.notificationService.showError(
+        'Password Reset Failed',
+        errorMessage
+      );
+      
+      return ControllerResult.failure(errorMessage);
+    }
   }
 
-  handleLogout(): ControllerResult {
-    // Clear auth data
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    
-    this.notificationService.showInfo('Goodbye!', 'You have been logged out.');
-    
-    // Force page reload to reset authentication state
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 1000);
-    
-    return ControllerResult.success();
+  async handleLogout(): Promise<ControllerResult> {
+    try {
+      const result = await this.authenticationService.logout();
+      
+      this.notificationService.showInfo(
+        'Goodbye!',
+        'You have been logged out successfully.'
+      );
+      
+      // Navigate to login page
+      this.navigationService.navigateToLogin();
+      
+      return ControllerResult.success();
+    } catch (error: any) {
+      // Even if logout fails on the server, clear local state
+      this.notificationService.showInfo(
+        'Goodbye!',
+        'You have been logged out.'
+      );
+      
+      this.navigationService.navigateToLogin();
+      
+      return ControllerResult.success();
+    }
+  }
+
+  async handleRefreshAuthentication(): Promise<ControllerResult> {
+    try {
+      const result = await this.authenticationService.refreshAuthentication();
+      
+      if (result.isSuccess) {
+        return ControllerResult.success(result.value.user);
+      } else {
+        // Refresh failed, redirect to login
+        this.handleSessionExpired();
+        return ControllerResult.failure('Session expired');
+      }
+    } catch (error: any) {
+      this.handleSessionExpired();
+      return ControllerResult.failure('Session refresh failed');
+    }
+  }
+
+  handleSessionExpired(): void {
+    this.authenticationService.clearAuthentication();
+    this.notificationService.showWarning(
+      'Session Expired',
+      'Your session has expired. Please login again.'
+    );
+    this.navigationService.navigateToLogin();
+  }
+
+  getCurrentUser() {
+    return this.authenticationService.getCurrentUserFromToken();
+  }
+
+  isAuthenticated(): boolean {
+    return this.authenticationService.isAuthenticated();
+  }
+
+  needsTokenRefresh(): boolean {
+    return this.authenticationService.needsTokenRefresh();
+  }
+
+  /**
+   * Map API error messages to user-friendly messages
+   */
+  private getErrorMessage(apiErrorMessage: string): string {
+    const errorMap: Record<string, string> = {
+      'Invalid credentials': 'The email or password you entered is incorrect.',
+      'User not found': 'No account found with this email address.',
+      'Email already exists': 'An account with this email already exists.',
+      'Invalid email format': 'Please enter a valid email address.',
+      'Password too weak': 'Password must be at least 8 characters with uppercase, lowercase, and numbers.',
+      'Account locked': 'Your account has been temporarily locked. Please try again later.',
+      'Account not verified': 'Please verify your email address before logging in.',
+      'Account inactive': 'Your account is inactive. Please contact support.',
+      'Network error': 'Unable to connect to the server. Please check your internet connection.',
+      'Server error': 'Server error occurred. Please try again later.'
+    };
+
+    // Check for specific error patterns
+    for (const [key, value] of Object.entries(errorMap)) {
+      if (apiErrorMessage.toLowerCase().includes(key.toLowerCase())) {
+        return value;
+      }
+    }
+
+    // Return original message if no mapping found
+    return apiErrorMessage || 'An error occurred. Please try again.';
   }
 }

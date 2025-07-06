@@ -2,6 +2,8 @@ export interface INavigationService {
   navigateToBook(id: number): void;
   navigateToBooks(): void;
   navigateToDashboard(): void;
+  navigateToLogin(): void;
+  navigateToRegister(): void;
   goBack(): void;
 }
 

@@ -19,6 +19,14 @@ export class NavigationServiceImpl implements INavigationService {
     this.navigate('/dashboard');
   }
 
+  navigateToLogin(): void {
+    this.navigate('/login');
+  }
+
+  navigateToRegister(): void {
+    this.navigate('/register');
+  }
+
   goBack(): void {
     this.navigate(-1);
   }
