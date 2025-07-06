@@ -7,7 +7,7 @@ import { EmptyState } from '../../components/molecules/EmptyState';
 import { Button } from '../../components/ui/button';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 import { Book } from '../../services/api/types';
-import { useUserPermissions } from '../../hooks/useUserPermissions'; // ✅ FIXED: Import added
+import { useUserPermissions } from '../../hooks/useUserPermissions'; 
 
 export const BookDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,7 +15,7 @@ export const BookDetailsPage: React.FC = () => {
   const bookId = parseInt(id || '0', 10);
 
   const { data: book, isLoading, error } = useBook(bookId);
-  const permissions = useUserPermissions(); // ✅ FIXED: Now properly imported
+  const permissions = useUserPermissions(); 
 
   const handleBack = () => {
     navigate('/books');
