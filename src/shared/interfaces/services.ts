@@ -1,8 +1,8 @@
 export interface INavigationService {
-  navigateToMember(memberId: number): unknown;
-  navigateToMembers(): unknown;
   navigateToBook(id: number): void;
   navigateToBooks(): void;
+  navigateToMember(id: number): void; // NEW
+  navigateToMembers(): void; // NEW
   navigateToDashboard(): void;
   navigateToLogin(): void;
   navigateToRegister(): void;

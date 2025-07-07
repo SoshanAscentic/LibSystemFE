@@ -12,3 +12,11 @@ export { BookCard } from './BookCard';
 export { BookStatusBadge } from './BookStatusBadge';
 export { BookFilters } from './BookFilters';
 export { BookSearchResults } from './BookSearchResults';
+
+// Members-specific exports
+export { MemberCard } from './MemberCard';
+export { MemberTypeBadge } from './MemberTypeBadge';
+export { MemberFilters } from './MemberFilters';
+export { MemberSearchResults } from './MemberSearchResults';
+export { MemberPermissions } from './MemberPermissions';
+export { MemberBorrowingStatus } from './MemberBorrowingStatus';

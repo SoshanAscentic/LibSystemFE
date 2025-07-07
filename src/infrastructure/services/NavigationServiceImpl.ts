@@ -15,6 +15,14 @@ export class NavigationServiceImpl implements INavigationService {
     this.navigate('/books');
   }
 
+  navigateToMember(id: number): void {
+    this.navigate(`/members/${id}`);
+  }
+
+  navigateToMembers(): void {
+    this.navigate('/members');
+  }
+
   navigateToDashboard(): void {
     this.navigate('/dashboard');
   }
