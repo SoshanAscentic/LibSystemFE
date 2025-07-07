@@ -1,4 +1,6 @@
 export interface INavigationService {
+  navigateToMember(memberId: number): unknown;
+  navigateToMembers(): unknown;
   navigateToBook(id: number): void;
   navigateToBooks(): void;
   navigateToDashboard(): void;

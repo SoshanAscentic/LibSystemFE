@@ -1,7 +1,7 @@
 import { Result } from '../../shared/types/Result';
 import { Member, MemberStatistics } from '../entities/Member';
 import { CreateMemberDto, UpdateMemberDto } from '../dtos/MemberDto';
-import { MemberFilters, MemberSorting, MemberPagination } from '../valueObjects/MemberFilter';
+import { MemberFilters, MemberSorting, MemberPagination } from '../valueObjects/MemberFilters';
 
 export interface IMemberRepository {
   findAll(
