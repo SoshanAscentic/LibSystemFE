@@ -23,7 +23,7 @@ export function DashboardPage({ user }: DashboardPageProps) {
     activeLoans: 691
   }
 
-  // ✅ FIXED: Use actual user data instead of hardcoded values
+  // Use actual user data instead of hardcoded values
   const displayName = user?.name || 'User';
   const userEmail = user?.email || '';
   const userRole = user?.role || 'Member';
