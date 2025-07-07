@@ -122,18 +122,35 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
     }
   };
 
+  // ✅ FIXED: Removed duplicate code that was causing double deletion
   const handleConfirmDelete = async () => {
     if (!modal.book) return;
     
     setIsSubmitting(true);
     
-    const result = await controller.handleDeleteBook(modal.book);
-    
-    setIsSubmitting(false);
-    
-    if (result.success) {
+    try {
+      console.log('🗑️ Deleting book:', modal.book.bookId, modal.book.title);
+      
+      // Attempt the delete
+      const result = await controller.handleDeleteBook(modal.book);
+      
+      console.log('🗑️ Delete result:', result);
+      
+      // Always close modal and refresh - the controller handles notifications
       setModal({ type: null });
-      refreshBooks();
+      
+      // Force refresh the books list
+      console.log('🗑️ Refreshing books list...');
+      await refreshBooks();
+      console.log('✅ Books refreshed');
+      
+    } catch (error) {
+      console.error('❌ Unexpected error during delete:', error);
+      // Only show error notification for unexpected errors
+      setModal({ type: null });
+      await refreshBooks();
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -275,9 +292,14 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
         </DialogContent>
       </Dialog>
 
-      {/* View Book Modal */}
+     {/* View Book Modal */}
       <Dialog open={modal.type === 'view'} onOpenChange={closeModal}>
         <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {modal.book ? `${modal.book.title} - Book Details` : 'Book Details'}
+            </DialogTitle>
+          </DialogHeader>
           {modal.book && (
             <BookDetails
               book={modal.book}

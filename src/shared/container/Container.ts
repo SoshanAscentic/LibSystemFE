@@ -16,9 +16,8 @@ export class Container {
   resolve<T>(key: string): T {
     const factory = this.services.get(key);
     if (!factory) {
-      const registeredKeys = Array.from(this.services.keys());
-      console.error(`Available services: ${registeredKeys.join(', ')}`);
-      throw new Error(`Service '${key}' not registered. Available services: ${registeredKeys.join(', ')}`);
+      const availableKeys = Array.from(this.services.keys()).join(', ');
+      throw new Error(`Service '${key}' not registered. Available: ${availableKeys}`);
     }
 
     // Handle singletons
@@ -38,11 +37,13 @@ export class Container {
     this.register(key, factory, true);
   }
 
-  getRegisteredServices(): string[] {
-    return Array.from(this.services.keys());
+  // Simple check method
+  has(key: string): boolean {
+    return this.services.has(key);
   }
 
-  isRegistered(key: string): boolean {
-    return this.services.has(key);
+  // Get all keys for debugging
+  getKeys(): string[] {
+    return Array.from(this.services.keys());
   }
 }

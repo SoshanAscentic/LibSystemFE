@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { AuthenticationService, AuthUser, LoginCredentials, RegisterData } from '../domain/services/AuthenticationService';
 import { ControllerResult } from '../shared/interfaces/common';
+import { TokenService } from '@/infrastructure/services/TokenService';
 
 // Auth State Types
 interface AuthState {
@@ -60,6 +61,8 @@ const initialState: AuthState = {
 
 // Auth reducer
 function authReducer(state: AuthState, action: AuthAction): AuthState {
+  console.log('Auth Action:', action.type, action);
+  
   switch (action.type) {
     case 'AUTH_INIT_START':
       return {
@@ -176,137 +179,184 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children, authService }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Initialize authentication on mount
-  useEffect(() => {
-    initializeAuth();
-  }, []);
+  // Refresh authentication - MOVED UP before initializeAuth
+  const refreshAuth = React.useCallback(async (): Promise<void> => {
+    console.log('AuthProvider: Refreshing auth...');
+    try {
+      if (authService.needsTokenRefresh()) {
+        const result = await authService.refreshAuthentication();
+        
+        if (result.isSuccess) {
+          console.log('AuthProvider: Token refresh successful');
+          dispatch({ type: 'REFRESH_TOKEN_SUCCESS', payload: { user: result.value.user } });
+        } else {
+          console.log('AuthProvider: Token refresh failed');
+          dispatch({ type: 'LOGOUT_SUCCESS' });
+        }
+      }
+    } catch (error) {
+      console.error('AuthProvider: Refresh auth error:', error);
+      dispatch({ type: 'LOGOUT_SUCCESS' });
+    }
+  }, [authService]);
 
   // Initialize authentication state
-  const initializeAuth = async () => {
+  const initializeAuth = React.useCallback(async () => {
+    console.log('AuthProvider: Starting auth initialization...');
     dispatch({ type: 'AUTH_INIT_START' });
 
     try {
+      // First, check if we have any tokens
+      const hasTokens = TokenService.getAccessToken() && TokenService.getRefreshToken();
+      
+      if (!hasTokens) {
+        console.log('AuthProvider: No tokens found');
+        dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: null } });
+        return;
+      }
+
       if (authService.isAuthenticated()) {
+        console.log('AuthProvider: User appears authenticated, getting user from token...');
+        
         // Try to get current user from token first (fast)
         const tokenUser = authService.getCurrentUserFromToken();
         
         if (tokenUser) {
+          console.log('AuthProvider: Got user from token:', tokenUser.email);
           dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: tokenUser } });
           
           // Then verify with server (background)
           try {
+            console.log('AuthProvider: Verifying with server...');
             const result = await authService.getCurrentUser();
             if (result.isSuccess && result.value) {
+              console.log('AuthProvider: Server verification successful');
               dispatch({ type: 'REFRESH_TOKEN_SUCCESS', payload: { user: result.value } });
             }
           } catch (error) {
+            console.log('AuthProvider: Server verification failed, trying refresh...');
             // If server verification fails, try token refresh
             await refreshAuth();
           }
         } else {
+          console.log('AuthProvider: No valid token user, trying refresh...');
           // No valid token, try refresh
           await refreshAuth();
         }
       } else {
+        console.log('AuthProvider: User not authenticated');
         dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: null } });
       }
     } catch (error) {
-      dispatch({ type: 'AUTH_INIT_FAILURE', payload: { error: 'Failed to initialize authentication' } });
+      console.error('AuthProvider: Auth initialization failed:', error);
+      // Clear any invalid tokens and mark as not authenticated
+      authService.clearAuthentication();
+      dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: null } });
     }
-  };
+  }, [authService, refreshAuth]);
+
+  // Initialize authentication on mount
+  React.useEffect(() => {
+    console.log('AuthProvider: Initializing authentication...');
+    initializeAuth();
+  }, [initializeAuth]);
+
+  // Debug state changes
+  React.useEffect(() => {
+    console.log('Auth State Changed:', {
+      isAuthenticated: state.isAuthenticated,
+      isInitialized: state.isInitialized,
+      isLoading: state.isLoading,
+      user: state.user?.email,
+      error: state.error
+    });
+  }, [state.isAuthenticated, state.isInitialized, state.isLoading, state.user?.email, state.error]);
 
   // Login function
-  const login = async (credentials: LoginCredentials): Promise<ControllerResult> => {
+  const login = React.useCallback(async (credentials: LoginCredentials): Promise<ControllerResult> => {
+    console.log('AuthProvider: Starting login...', credentials.email);
     dispatch({ type: 'LOGIN_START' });
 
     try {
       const result = await authService.login(credentials);
 
       if (result.isSuccess) {
+        console.log('AuthProvider: Login successful:', result.value.user.email);
         dispatch({ type: 'LOGIN_SUCCESS', payload: { user: result.value.user } });
         return ControllerResult.success(result.value.user);
       } else {
+        console.log('AuthProvider: Login failed:', result.error.message);
         dispatch({ type: 'LOGIN_FAILURE', payload: { error: result.error.message } });
         return ControllerResult.failure(result.error.message);
       }
     } catch (error: any) {
+      console.error('AuthProvider: Login error:', error);
       const errorMessage = error.message || 'Login failed';
       dispatch({ type: 'LOGIN_FAILURE', payload: { error: errorMessage } });
       return ControllerResult.failure(errorMessage);
     }
-  };
+  }, [authService]);
 
   // Register function
-  const register = async (userData: RegisterData): Promise<ControllerResult> => {
+  const register = React.useCallback(async (userData: RegisterData): Promise<ControllerResult> => {
+    console.log('AuthProvider: Starting registration...', userData.email);
     dispatch({ type: 'REGISTER_START' });
 
     try {
       const result = await authService.register(userData);
 
       if (result.isSuccess) {
+        console.log('AuthProvider: Registration successful:', result.value.user.email);
         dispatch({ type: 'REGISTER_SUCCESS', payload: { user: result.value.user } });
         return ControllerResult.success(result.value.user);
       } else {
+        console.log('AuthProvider: Registration failed:', result.error.message);
         dispatch({ type: 'REGISTER_FAILURE', payload: { error: result.error.message } });
         return ControllerResult.failure(result.error.message);
       }
     } catch (error: any) {
+      console.error('AuthProvider: Registration error:', error);
       const errorMessage = error.message || 'Registration failed';
       dispatch({ type: 'REGISTER_FAILURE', payload: { error: errorMessage } });
       return ControllerResult.failure(errorMessage);
     }
-  };
+  }, [authService]);
 
   // Logout function
-  const logout = async (): Promise<void> => {
+  const logout = React.useCallback(async (): Promise<void> => {
+    console.log('AuthProvider: Starting logout...');
     try {
       await authService.logout();
+      console.log('AuthProvider: Logout successful');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('AuthProvider: Logout error:', error);
     } finally {
       dispatch({ type: 'LOGOUT_SUCCESS' });
     }
-  };
-
-  // Refresh authentication
-  const refreshAuth = async (): Promise<void> => {
-    try {
-      if (authService.needsTokenRefresh()) {
-        const result = await authService.refreshAuthentication();
-        
-        if (result.isSuccess) {
-          dispatch({ type: 'REFRESH_TOKEN_SUCCESS', payload: { user: result.value.user } });
-        } else {
-          dispatch({ type: 'LOGOUT_SUCCESS' });
-        }
-      }
-    } catch (error) {
-      dispatch({ type: 'LOGOUT_SUCCESS' });
-    }
-  };
+  }, [authService]);
 
   // Clear error
-  const clearError = (): void => {
+  const clearError = React.useCallback((): void => {
     dispatch({ type: 'CLEAR_ERROR' });
-  };
+  }, []);  // No dependencies - this function is stable
 
   // Permission utilities
-  const hasRole = (role: string): boolean => {
+  const hasRole = React.useCallback((role: string): boolean => {
     return state.user?.role === role;
-  };
+  }, [state.user?.role]);
 
-  const hasAnyRole = (roles: string[]): boolean => {
+  const hasAnyRole = React.useCallback((roles: string[]): boolean => {
     return state.user ? roles.includes(state.user.role) : false;
-  };
+  }, [state.user?.role]);
 
-  const canAccess = (resource: string, action: string): boolean => {
+  const canAccess = React.useCallback((resource: string, action: string): boolean => {
     if (!state.user) return false;
 
     const permissions = ROLE_PERMISSIONS[state.user.role];
     if (!permissions) return false;
 
     return permissions.resources.includes(resource) && permissions.actions.includes(action);
-  };
+  }, [state.user?.role]);
 
   // Context value
   const contextValue: AuthContextType = {
@@ -346,41 +396,4 @@ export const useAuth = (): AuthContextType => {
   }
   
   return context;
-};
-
-// Higher-order component for auth protection
-interface RequireAuthProps {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
-  roles?: string[];
-  resource?: string;
-  action?: string;
-}
-
-export const RequireAuth: React.FC<RequireAuthProps> = ({
-  children,
-  fallback = <div>Unauthorized</div>,
-  roles,
-  resource,
-  action
-}) => {
-  const { isAuthenticated, isInitialized, hasAnyRole, canAccess } = useAuth();
-
-  if (!isInitialized) {
-    return <div>Loading...</div>;
-  }
-
-  if (!isAuthenticated) {
-    return <>{fallback}</>;
-  }
-
-  if (roles && !hasAnyRole(roles)) {
-    return <>{fallback}</>;
-  }
-
-  if (resource && action && !canAccess(resource, action)) {
-    return <>{fallback}</>;
-  }
-
-  return <>{children}</>;
 };

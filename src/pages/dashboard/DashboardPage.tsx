@@ -1,4 +1,3 @@
-// src/pages/dashboard/DashboardPage.tsx
 import * as React from "react"
 import { StatsCard } from "@/components/molecules/StatsCard"
 import { RecentActivity, type ActivityItem } from "@/components/molecules/RecentActivity"
@@ -15,13 +14,7 @@ export interface DashboardPageProps {
   onLogout?: () => void
 }
 
-export function DashboardPage({ 
-  user = {
-    name: "Soshan Wijayarathne",
-    email: "john@library.com", 
-    role: "Administrator"
-  }
-}: DashboardPageProps) {
+export function DashboardPage({ user }: DashboardPageProps) {
   // Sample data - in a real app, this would come from API
   const stats = {
     totalBooks: 2847,
@@ -29,6 +22,14 @@ export function DashboardPage({
     totalMembers: 1234,
     activeLoans: 691
   }
+
+  // ✅ FIXED: Use actual user data instead of hardcoded values
+  const displayName = user?.name || 'User';
+  const userEmail = user?.email || '';
+  const userRole = user?.role || 'Member';
+  
+  // Extract first name for welcome message
+  const firstName = displayName.split(' ')[0];
 
   const recentActivities: ActivityItem[] = [
     {
@@ -83,11 +84,17 @@ export function DashboardPage({
       {/* Page Header */}
       <div className="min-w-0">
         <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)] mb-2 truncate">
-          Welcome back, {user.name.split(' ')[0]}! 👋
+          Welcome back, {firstName}! 👋
         </h1>
         <p className="text-[var(--color-gray-600)] text-sm sm:text-base">
           Here's what's happening in your library today.
         </p>
+        {/* Debug info for development - remove in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-2 text-xs text-gray-500">
+            Role: {userRole} | Email: {userEmail}
+          </div>
+        )}
       </div>
 
       {/* Statistics Cards */}
@@ -131,7 +138,7 @@ export function DashboardPage({
 
         {/* Quick Actions */}
         <div className="xl:col-span-1">
-          <QuickActions userRole={user.role} />
+          <QuickActions userRole={userRole} />
         </div>
       </div>
 

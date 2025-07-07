@@ -8,10 +8,10 @@ import { Toaster } from 'sonner';
 import { ContainerProvider } from './shared/providers/ContainerProvider';
 import { getContainer } from './shared/container/containerSetup';
 import { configureDependencies } from './infrastructure/container/DependencyConfiguration';
+import { SERVICE_KEYS } from './shared/container/ServiceKeys';
 
 // Authentication
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { useAuthService } from './hooks/useAuthService';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Layout Components
@@ -32,7 +32,6 @@ import { EditBookPageContainer } from './presentation/components/EditBookPageCon
 
 // Loading Component
 import { LoadingState } from './components/molecules/LoadingState';
-import { AuthenticationService } from './domain/services/AuthenticationService';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -50,13 +49,18 @@ const queryClient = new QueryClient({
 
 // Main App Layout Component for authenticated users
 function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await logout();
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const handleNavigation = (path: string) => {
@@ -77,6 +81,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     console.log('Search:', query);
     // TODO: Implement global search functionality
   };
+
+  if (isLoading) {
+    return <LoadingState message="Loading..." />;
+  }
 
   if (!user) {
     return <LoadingState message="Loading user data..." />;
@@ -117,6 +125,11 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 // Authentication wrapper
 function AuthenticatedApp() {
   const navigate = useNavigate();
+  const { isAuthenticated, isInitialized, user } = useAuth();
+
+  if (!isInitialized) {
+    return <LoadingState message="Initializing application..." />;
+  }
 
   return (
     <Routes>
@@ -124,18 +137,22 @@ function AuthenticatedApp() {
       <Route 
         path="/login" 
         element={
-          <LoginPage 
-            onNavigateToRegister={() => navigate('/register')}
-            onNavigateToForgotPassword={() => console.log('Navigate to forgot password')}
-          />
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : (
+            <LoginPage 
+              onNavigateToRegister={() => navigate('/register')}
+              onNavigateToForgotPassword={() => console.log('Navigate to forgot password')}
+            />
+          )
         } 
       />
       <Route 
         path="/register" 
         element={
-          <RegisterPage 
-            onNavigateToLogin={() => navigate('/login')}
-          />
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : (
+            <RegisterPage 
+              onNavigateToLogin={() => navigate('/login')}
+            />
+          )
         } 
       />
 
@@ -145,7 +162,13 @@ function AuthenticatedApp() {
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <AppLayout>
-            <DashboardPage />
+            <DashboardPage 
+              user={user ? {
+                name: user.fullName,
+                email: user.email,
+                role: user.role,
+              } : undefined}
+            />
           </AppLayout>
         </ProtectedRoute>
       } />
@@ -183,7 +206,7 @@ function AuthenticatedApp() {
         </ProtectedRoute>
       } />
 
-      {/* Future routes - redirect to dashboard for now */}
+      {/* Future routes */}
       <Route path="/members" element={
         <ProtectedRoute resource="members" action="read">
           <AppLayout>
@@ -206,53 +229,9 @@ function AuthenticatedApp() {
         </ProtectedRoute>
       } />
 
-      <Route path="/analytics" element={
-        <ProtectedRoute roles={['Administrator', 'ManagementStaff']}>
-          <AppLayout>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold">Analytics</h1>
-              <p className="text-gray-600 mt-2">Coming soon...</p>
-            </div>
-          </AppLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/admin" element={
-        <ProtectedRoute roles={['Administrator']}>
-          <AppLayout>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold">Administration</h1>
-              <p className="text-gray-600 mt-2">Coming soon...</p>
-            </div>
-          </AppLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/profile" element={
-        <ProtectedRoute>
-          <AppLayout>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold">Profile</h1>
-              <p className="text-gray-600 mt-2">Coming soon...</p>
-            </div>
-          </AppLayout>
-        </ProtectedRoute>
-      } />
-
-      {/* 404 Route */}
+      {/* Catch all - redirect to dashboard if authenticated, login if not */}
       <Route path="*" element={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-            <p className="text-gray-600 mb-4">Page not found</p>
-            <button 
-              onClick={() => navigate('/dashboard')}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Go to Dashboard
-            </button>
-          </div>
-        </div>
+        isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
       } />
     </Routes>
   );
@@ -262,11 +241,85 @@ function AuthenticatedApp() {
 function AppWithContainer() {
   const navigate = useNavigate();
   const container = getContainer();
-  const authService = React.useMemo(() => {
-    // Configure dependencies
-    configureDependencies(container, (path: string | number) => navigate(String(path)));
-    return container.resolve('AuthenticationService') as AuthenticationService;
+  const [isConfigured, setIsConfigured] = React.useState(false);
+  const [configError, setConfigError] = React.useState<string | null>(null);
+
+  // Configure dependencies once
+  React.useEffect(() => {
+    const configureDeps = async () => {
+      try {
+        console.log('🔧 Configuring dependencies...');
+        configureDependencies(container, (path: string | number) => navigate(String(path)));
+        
+        console.log('✅ Dependencies configured successfully');
+        setIsConfigured(true);
+      } catch (error: any) {
+        console.error('❌ Failed to configure dependencies:', error);
+        setConfigError(error.message);
+      }
+    };
+
+    configureDeps();
   }, [container, navigate]);
+
+  // Get authentication service after configuration
+  const authService = React.useMemo(() => {
+    if (!isConfigured) {
+      return null;
+    }
+
+    try {
+      console.log('🔍 Resolving AuthenticationService...');
+      const service = container.resolve(SERVICE_KEYS.AUTHENTICATION_SERVICE);
+      console.log('✅ AuthenticationService resolved successfully');
+      return service;
+    } catch (error: any) {
+      console.error('❌ Failed to resolve AuthenticationService:', error);
+      console.error('Available services in container:', Object.keys(container));
+      setConfigError(`Failed to resolve AuthenticationService: ${error.message}`);
+      return null;
+    }
+  }, [container, isConfigured]);
+
+  // Make container available globally for debugging in development
+  React.useEffect(() => {
+    if (import.meta.env.DEV) {
+      (window as any).container = container;
+    }
+  }, [container]);
+
+  // Show loading while configuring
+  if (!isConfigured) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Initializing Application</h2>
+          <p className="text-gray-600">Setting up services...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if configuration failed
+  if (configError || !authService) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <h2 className="text-xl font-bold mb-2">Application Error</h2>
+            <p className="text-sm">{configError || 'Failed to initialize authentication service'}</p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ContainerProvider container={container}>

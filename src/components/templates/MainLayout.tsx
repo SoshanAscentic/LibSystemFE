@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sidebar } from '../organisms/Sidebar';
-import { Header } from '../organisms/Header'; // You'll need to create this if it doesn't exist
+import { Header } from '../organisms/Header'; 
 
 interface MainLayoutProps {
   children: React.ReactNode;
