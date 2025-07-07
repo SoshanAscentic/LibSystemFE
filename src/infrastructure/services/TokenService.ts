@@ -159,7 +159,7 @@ export class TokenService {
   }
 
   /**
-   * Decode JWT token (without verification - for client-side use only)
+   * Decode JWT token (without verification - for client-side use only) - Enhanced for backend JWT format
    */
   static decodeToken(token: string): DecodedToken | null {
     try {
@@ -193,7 +193,7 @@ export class TokenService {
       const payload = JSON.parse(jsonPayload);
       console.log('TokenService: Decoded JWT payload:', payload);
       
-      // 🔍 Enhanced role extraction - check multiple possible claim names
+      // Enhanced role extraction - check multiple possible claim names
       const extractRole = (payload: any): string => {
         const possibleRoleClaims = [
           'role',
@@ -204,8 +204,8 @@ export class TokenService {
           'custom:role',
           'user_role',
           'userRole',
-          'memberType', // Your backend might use this
-          'MemberType'  // Or this
+          'memberType',
+          'MemberType'
         ];
         
         for (const claim of possibleRoleClaims) {
@@ -228,62 +228,86 @@ export class TokenService {
 
       // Enhanced name extraction
       const extractName = (payload: any): string => {
-        // Try different name claim combinations
-        if (payload.name) return payload.name;
-        if (payload.fullName) return payload.fullName;
-        if (payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name']) {
-          return payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'];
+        console.log('🔍 TokenService: Extracting name from payload...');
+        
+        // 1. Try fullName if it exists and is not just email
+        if (payload.fullName && payload.fullName !== payload.email) {
+          console.log('🔍 TokenService: Using fullName:', payload.fullName);
+          return payload.fullName;
         }
-        if (payload.given_name && payload.family_name) {
-          return `${payload.given_name} ${payload.family_name}`;
+        
+        // 2. Build from given name and surname claims (your JWT structure)
+        const givenName = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'] || payload.given_name;
+        const surname = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'] || payload.family_name;
+        
+        if (givenName && surname) {
+          const fullName = `${givenName} ${surname}`.trim();
+          console.log('🔍 TokenService: Built name from JWT claims:', fullName);
+          return fullName;
         }
-        if (payload.given_name) return payload.given_name;
-        if (payload.email) return payload.email.split('@')[0];
+        
+        // 3. Try individual name fields
+        if (givenName) {
+          console.log('🔍 TokenService: Using given name only:', givenName);
+          return givenName;
+        }
+        
+        // 4. Try standard name claim (but not if it's just the email)
+        const standardName = payload.name || payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'];
+        if (standardName && standardName !== payload.email) {
+          console.log('🔍 TokenService: Using standard name claim:', standardName);
+          return standardName;
+        }
+        
+        // 5. Fallback to email username
+        if (payload.email) {
+          const emailName = payload.email.split('@')[0];
+          console.log('🔍 TokenService: Using email username as fallback:', emailName);
+          return emailName;
+        }
+        
+        console.log('🔍 TokenService: No name found, using fallback');
         return 'Unknown User';
       };
 
       // Map various possible claim names to our standard interface
       const decoded: DecodedToken = {
-        // User ID can be in different claims
-        userId: parseInt(payload.sub) || 
+        // User ID - enhanced extraction
+        userId: parseInt(payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']) || 
+                parseInt(payload.sub) || 
                 parseInt(payload.userId) || 
                 parseInt(payload.id) || 
                 parseInt(payload.nameid) ||
-                parseInt(payload.unique_name) ||
                 0,
         
-        // Email can be in different claims  
-        email: payload.email || 
-              payload.unique_name ||
-              payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
-              '',
-              
+        // Email extraction
+        email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
+               payload.email || 
+               payload.unique_name ||
+               '',
+               
         // Enhanced name extraction
         name: extractName(payload),
         
-        // 🔧 Use enhanced role extraction
+        // Use enhanced role extraction
         role: extractRole(payload),
               
         exp: payload.exp,
         iat: payload.iat || Math.floor(Date.now() / 1000),
         
+        // Store processed name parts for AuthUser mapping
+        given_name: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'] || payload.given_name,
+        family_name: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'] || payload.family_name,
+        fullName: extractName(payload), // Store the extracted full name
+        
         // Store original claims for debugging
         sub: payload.sub,
         nameid: payload.nameid,
         unique_name: payload.unique_name,
-        given_name: payload.given_name,
-        family_name: payload.family_name,
-        fullName: payload.fullName,
         ...payload // Include all other claims
       };
       
-      console.log('TokenService: Mapped token data with role:', decoded.role);
-      console.log('TokenService: Final decoded user:', {
-        userId: decoded.userId,
-        email: decoded.email,
-        name: decoded.name,
-        role: decoded.role
-      });
+      console.log('TokenService: Final decoded user with name:', decoded.name, 'and role:', decoded.role);
       
       // Validate that we have minimum required fields
       if (!decoded.userId && !decoded.email) {
@@ -300,6 +324,7 @@ export class TokenService {
       return null;
     }
   }
+
   /**
    * Get current user from token
    */

@@ -89,13 +89,13 @@ export const BooksGrid: React.FC<BooksGridProps> = ({
               </Button>
             </div>
 
-            {/* Add Book Button */}
+            {/* Add Book Button
             {canAdd && onAddBook && (
               <Button onClick={onAddBook}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Book
               </Button>
-            )}
+            )} */}
           </div>
         </div>
 

@@ -1,3 +1,4 @@
+// src/domain/services/AuthenticationService.ts
 import { Result } from '../../shared/types/Result';
 import { BusinessError, ValidationError } from '../../shared/types/errors';
 import { AuthApiService, AuthResponse, UserInfo, LoginRequest, RegisterRequest, ChangePasswordRequest } from '../../infrastructure/api/AuthApiService';
@@ -475,28 +476,44 @@ export class AuthenticationService {
     }
 
     try {
-      // Map the JWT claims to your AuthUser format
-      // Your backend might use different claim names
+      console.log('👤 AuthenticationService: Mapping token to AuthUser...');
+      console.log('👤 AuthenticationService: Token name field:', decodedToken.name);
+      console.log('👤 AuthenticationService: Token given_name:', decodedToken.given_name);
+      console.log('👤 AuthenticationService: Token family_name:', decodedToken.family_name);
+      
+      // Extract individual name parts for proper mapping
+      const firstName = decodedToken.given_name || 
+                       decodedToken.name?.split(' ')[0] || 
+                       '';
+      const lastName = decodedToken.family_name || 
+                      decodedToken.name?.split(' ').slice(1).join(' ') || 
+                      '';
+      
+      // Use the full name that was properly extracted by TokenService
+      const fullName = decodedToken.name || 
+                      `${firstName} ${lastName}`.trim() ||
+                      decodedToken.email ||
+                      'Unknown User';
+
       const authUser: AuthUser = {
         userId: decodedToken.userId || 0,
         email: decodedToken.email || 'unknown@email.com',
-        firstName: decodedToken.given_name || 
-                   decodedToken.name?.split(' ')[0] || 
-                   '',
-        lastName: decodedToken.family_name || 
-                  decodedToken.name?.split(' ').slice(1).join(' ') || 
-                  '',
-        fullName: decodedToken.name || 
-                  decodedToken.fullName || 
-                  `${decodedToken.given_name || ''} ${decodedToken.family_name || ''}`.trim() ||
-                  decodedToken.email ||
-                  'Unknown User',
+        firstName: firstName,
+        lastName: lastName,
+        fullName: fullName, // This should now be "Soshan Wijayarathne"
         role: decodedToken.role || 'Member',
         isActive: true,
         createdAt: new Date(decodedToken.iat * 1000).toISOString()
       };
 
-      console.log('👤 AuthenticationService: Successfully mapped user from token:', authUser.email);
+      console.log('👤 AuthenticationService: Final AuthUser mapping:', {
+        email: authUser.email,
+        firstName: authUser.firstName,
+        lastName: authUser.lastName,
+        fullName: authUser.fullName,
+        role: authUser.role
+      });
+      
       return authUser;
     } catch (error) {
       console.error('👤 AuthenticationService: Error mapping token to user:', error);
@@ -520,53 +537,62 @@ export class AuthenticationService {
   }
 
   /**
-   * Map API UserInfo to domain AuthUser - Updated to be more flexible
+   * Map API UserInfo to domain AuthUser - Updated to preserve role from token
    */
   private mapUserInfoToAuthUser(userInfo: UserInfo): AuthUser {
-  try {
-    console.log('👤 AuthenticationService: Mapping user info:', userInfo);
-    
-    if (!userInfo) {
-      throw new Error('UserInfo is null or undefined');
-    }
+    try {
+      console.log('👤 AuthenticationService: Mapping user info:', userInfo);
+      
+      if (!userInfo) {
+        throw new Error('UserInfo is null or undefined');
+      }
 
-    // 🔧 CRITICAL FIX: If server response doesn't have role, get it from token
-    let userRole = userInfo.role;
-    
-    if (!userRole) {
-      console.warn('👤 AuthenticationService: Server response missing role, getting from token...');
+      // Get role from token FIRST, then check server response
       const tokenUser = this.getCurrentUserFromToken();
+      let userRole = 'Member'; // Default fallback
+      
+      // Priority 1: Use role from token (most reliable)
       if (tokenUser && tokenUser.role) {
         userRole = tokenUser.role;
-        console.log('👤 AuthenticationService: Retrieved role from token:', userRole);
-      } else {
-        userRole = 'Member'; // fallback
-        console.warn('👤 AuthenticationService: Could not get role from token, using fallback');
+        console.log('👤 AuthenticationService: Using role from token:', userRole);
       }
+      
+      // Priority 2: If server provides role, use it (but validate it's not empty/Member when token says otherwise)
+      if (userInfo.role && userInfo.role !== 'Member') {
+        userRole = userInfo.role;
+        console.log('👤 AuthenticationService: Using role from server:', userRole);
+      } else if (userInfo.role === 'Member' && tokenUser?.role && tokenUser.role !== 'Member') {
+        // Server says Member but token says something else - trust the token
+        userRole = tokenUser.role;
+        console.log('👤 AuthenticationService: Server says Member but token says', tokenUser.role, '- trusting token');
+      }
+
+      console.log('👤 AuthenticationService: Final determined role:', userRole);
+
+      // Handle the mapped user info from your backend
+      const authUser: AuthUser = {
+        userId: userInfo.userId || (tokenUser?.userId) || 0,
+        email: userInfo.email || (tokenUser?.email) || 'unknown@email.com',
+        firstName: userInfo.firstName || '',
+        lastName: userInfo.lastName || '',
+        fullName: userInfo.fullName || 
+                 `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim() || 
+                 (tokenUser?.fullName) ||
+                 userInfo.email || 
+                 'Unknown User',
+        role: userRole, // Use the carefully determined role
+        isActive: userInfo.isActive !== false,
+        createdAt: userInfo.createdAt || new Date().toISOString()
+      };
+
+      console.log('👤 AuthenticationService: Mapped auth user with preserved role:', authUser);
+      console.log('👤 AuthenticationService: FINAL ROLE CHECK:', authUser.role);
+      return authUser;
+      
+    } catch (error) {
+      console.error('👤 AuthenticationService: User mapping error:', error);
+      console.error('👤 AuthenticationService: Input userInfo:', userInfo);
+      throw new Error(`Failed to map user info: ${error}`);
     }
-
-    // Handle the mapped user info from your backend
-    const authUser: AuthUser = {
-      userId: userInfo.userId || 0,
-      email: userInfo.email || 'unknown@email.com',
-      firstName: userInfo.firstName || '',
-      lastName: userInfo.lastName || '',
-      fullName: userInfo.fullName || 
-              `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim() || 
-              userInfo.email || 
-              'Unknown User',
-      role: userRole, // 🔧 Use the preserved/retrieved role
-      isActive: userInfo.isActive !== false,
-      createdAt: userInfo.createdAt || new Date().toISOString()
-    };
-
-    console.log('👤 AuthenticationService: Mapped auth user with preserved role:', authUser);
-    return authUser;
-    
-  } catch (error) {
-    console.error('👤 AuthenticationService: User mapping error:', error);
-    console.error('👤 AuthenticationService: Input userInfo:', userInfo);
-    throw new Error(`Failed to map user info: ${error}`);
   }
-}
 }

@@ -13,7 +13,7 @@ export const CreateBookPage: React.FC<CreateBookPageProps> = ({ controller }) =>
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
-    controller.handleNavigateToBooks();
+      window.history.back();
   };
 
   const handleSubmit = async (data: CreateBookDto) => {
@@ -28,7 +28,7 @@ export const CreateBookPage: React.FC<CreateBookPageProps> = ({ controller }) =>
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={handleBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Books
+          Back
         </Button>
       </div>
 

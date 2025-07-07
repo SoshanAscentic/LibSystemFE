@@ -5,7 +5,7 @@ import { Card } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../ui/dropdown-menu';
-import { MoreHorizontal, Eye, Edit, Trash2, BookOpen, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Trash2, BookOpen, ArrowUpDown, Plus } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 interface BooksTableProps {
@@ -16,9 +16,11 @@ interface BooksTableProps {
   onBookEdit?: (book: Book) => void;
   onBookDelete?: (book: Book) => void;
   onBookBorrow?: (book: Book) => void;
+  onAddBook?: () => void; // Keep prop for empty state
   canEdit?: boolean;
   canDelete?: boolean;
   canBorrow?: boolean;
+  canAdd?: boolean; // Keep prop for empty state
   className?: string;
 }
 
@@ -43,9 +45,11 @@ export const BooksTable: React.FC<BooksTableProps> = ({
   onBookEdit,
   onBookDelete,
   onBookBorrow,
+  onAddBook, // Keep for empty state
   canEdit = false,
   canDelete = false,
   canBorrow = false,
+  canAdd = false, // Keep for empty state
   className
 }) => {
   const handleSort = (field: 'title' | 'author' | 'publicationYear' | 'category') => {
@@ -73,154 +77,177 @@ export const BooksTable: React.FC<BooksTableProps> = ({
   };
 
   return (
-    <Card className={className}>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-3 text-left">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSort('title')}
-                  className="group h-auto p-0 font-medium text-gray-700 hover:text-gray-900"
-                >
-                  Title
-                  {getSortIcon('title')}
-                </Button>
-              </th>
-              <th className="px-6 py-3 text-left">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSort('author')}
-                  className="group h-auto p-0 font-medium text-gray-700 hover:text-gray-900"
-                >
-                  Author
-                  {getSortIcon('author')}
-                </Button>
-              </th>
-              <th className="px-6 py-3 text-left">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSort('publicationYear')}
-                  className="group h-auto p-0 font-medium text-gray-700 hover:text-gray-900"
-                >
-                  Year
-                  {getSortIcon('publicationYear')}
-                </Button>
-              </th>
-              <th className="px-6 py-3 text-left">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSort('category')}
-                  className="group h-auto p-0 font-medium text-gray-700 hover:text-gray-900"
-                >
-                  Category
-                  {getSortIcon('category')}
-                </Button>
-              </th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
-                Status
-              </th>
-              <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {books.map((book) => (
-              <tr 
-                key={book.bookId} 
-                className={cn(
-                  'hover:bg-gray-50',
-                  !book.isAvailable && 'opacity-75'
-                )}
-              >
-                <td className="px-6 py-4">
-                  <div>
-                    <p className="font-medium text-gray-900">{book.title}</p>
-                    <p className="text-sm text-gray-500">ID: #{book.bookId}</p>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-gray-900">
-                  {book.author}
-                </td>
-                <td className="px-6 py-4 text-gray-900">
-                  {book.publicationYear}
-                </td>
-                <td className="px-6 py-4">
-                  <Badge 
-                    variant="outline" 
-                    className={getCategoryColor(book.category)}
-                  >
-                    {book.category}
-                  </Badge>
-                </td>
-                <td className="px-6 py-4">
-                  <BookStatusBadge isAvailable={book.isAvailable} />
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    {canBorrow && book.isAvailable && onBookBorrow && (
-                      <Button
-                        size="sm"
-                        onClick={() => onBookBorrow(book)}
-                      >
-                        <BookOpen className="mr-1 h-3 w-3" />
-                        Borrow
-                      </Button>
-                    )}
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {onBookView && (
-                          <DropdownMenuItem onClick={() => onBookView(book)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                        )}
-                        {canEdit && onBookEdit && (
-                          <DropdownMenuItem onClick={() => onBookEdit(book)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Book
-                          </DropdownMenuItem>
-                        )}
-                        {canDelete && onBookDelete && (
-                          <DropdownMenuItem 
-                            onClick={() => onBookDelete(book)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Book
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {books.length === 0 && (
-          <div className="p-8 text-center">
-            <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No books found</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              No books match your current filters.
-            </p>
-          </div>
-        )}
+    <div className="space-y-4">
+      {/* 🔧 REMOVED: Header with Add Book button - now handled by main page */}
+      {/* Simple header with just book count */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900">Books Collection</h2>
+        <p className="text-sm text-gray-600">
+          {books.length} {books.length === 1 ? 'book' : 'books'} found
+        </p>
       </div>
-    </Card>
+
+      {/* Table */}
+      <Card className={className}>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('title')}
+                    className="group h-auto p-0 font-medium text-gray-700 hover:text-gray-900"
+                  >
+                    Title
+                    {getSortIcon('title')}
+                  </Button>
+                </th>
+                <th className="px-6 py-3 text-left">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('author')}
+                    className="group h-auto p-0 font-medium text-gray-700 hover:text-gray-900"
+                  >
+                    Author
+                    {getSortIcon('author')}
+                  </Button>
+                </th>
+                <th className="px-6 py-3 text-left">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('publicationYear')}
+                    className="group h-auto p-0 font-medium text-gray-700 hover:text-gray-900"
+                  >
+                    Year
+                    {getSortIcon('publicationYear')}
+                  </Button>
+                </th>
+                <th className="px-6 py-3 text-left">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('category')}
+                    className="group h-auto p-0 font-medium text-gray-700 hover:text-gray-900"
+                  >
+                    Category
+                    {getSortIcon('category')}
+                  </Button>
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {books.map((book) => (
+                <tr 
+                  key={book.bookId} 
+                  className={cn(
+                    'hover:bg-gray-50',
+                    !book.isAvailable && 'opacity-75'
+                  )}
+                >
+                  <td className="px-6 py-4">
+                    <div>
+                      <p className="font-medium text-gray-900">{book.title}</p>
+                      <p className="text-sm text-gray-500">ID: #{book.bookId}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-gray-900">
+                    {book.author}
+                  </td>
+                  <td className="px-6 py-4 text-gray-900">
+                    {book.publicationYear}
+                  </td>
+                  <td className="px-6 py-4">
+                    <Badge 
+                      variant="outline" 
+                      className={getCategoryColor(book.category)}
+                    >
+                      {book.category}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4">
+                    <BookStatusBadge isAvailable={book.isAvailable} />
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {canBorrow && book.isAvailable && onBookBorrow && (
+                        <Button
+                          size="sm"
+                          onClick={() => onBookBorrow(book)}
+                        >
+                          <BookOpen className="mr-1 h-3 w-3" />
+                          Borrow
+                        </Button>
+                      )}
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {onBookView && (
+                            <DropdownMenuItem onClick={() => onBookView(book)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                          )}
+                          {canEdit && onBookEdit && (
+                            <DropdownMenuItem onClick={() => onBookEdit(book)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Book
+                            </DropdownMenuItem>
+                          )}
+                          {canDelete && onBookDelete && (
+                            <DropdownMenuItem 
+                              onClick={() => onBookDelete(book)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Book
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Enhanced empty state with conditional Add Book action */}
+          {books.length === 0 && (
+            <div className="p-8 text-center">
+              <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No books found</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                No books match your current filters.
+              </p>
+              
+              {/* 🔧 KEEP: Conditional Add Book action in empty state only */}
+              {canAdd && onAddBook && (
+                <div className="mt-4">
+                  <Button onClick={onAddBook} variant="outline" className="flex items-center gap-2 mx-auto">
+                    <Plus className="h-4 w-4" />
+                    Add Your First Book
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
   );
 };

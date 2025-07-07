@@ -102,9 +102,14 @@ export class BooksController {
   }
 
   async handleDeleteBook(book: Book): Promise<ControllerResult> {
+  try {
+    console.log('🗑️ BooksController: Starting delete for book:', book.bookId, book.title);
+    
     const result = await this.bookService.deleteBook(book.bookId);
+    console.log('🗑️ BooksController: Service result:', result);
 
     if (result.isSuccess) {
+      console.log('🗑️ BooksController: Delete successful');
       this.notificationService.showSuccess(
         'Book deleted successfully',
         `"${book.title}" has been removed from the library`
@@ -112,14 +117,38 @@ export class BooksController {
       
       return ControllerResult.success();
     } else {
+      console.error('🗑️ BooksController: Delete failed:', result.error);
+      
+      // 🔧 Check if it's a "not found" error (which might happen if book was already deleted)
+      if (result.error.message && result.error.message.includes('not found')) {
+        console.warn('🗑️ BooksController: Book not found, treating as success (already deleted)');
+        this.notificationService.showSuccess(
+          'Book deleted successfully',
+          `"${book.title}" has been removed from the library`
+        );
+        return ControllerResult.success();
+      }
+      
+      // For other errors, show the actual error
       this.notificationService.showError(
         'Failed to delete book',
-        result.error.message
+        result.error.message || 'An error occurred while deleting the book'
       );
       
-      return ControllerResult.failure(result.error.message);
+      return ControllerResult.failure(result.error.message || 'Delete failed');
     }
+  } catch (error: any) {
+    console.error('🗑️ BooksController: Unexpected error:', error);
+    
+    const errorMessage = 'An unexpected error occurred. Please try again.';
+    this.notificationService.showError(
+      'Failed to delete book',
+      errorMessage
+    );
+    
+    return ControllerResult.failure(errorMessage);
   }
+}
 
   async handleSearchBooks(query: string, filters?: BookFilters): Promise<{ books: Book[]; success: boolean; error?: string }> {
     const result = await this.bookService.searchBooks(query, filters);

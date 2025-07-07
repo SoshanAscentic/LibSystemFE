@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext'; 
 
 interface UserPermissions {
   canEdit: boolean;
@@ -9,42 +9,49 @@ interface UserPermissions {
   canManageUsers: boolean;
 }
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  memberId?: number;
-}
-
-// Mock user - replace with actual auth context
-const mockUser: User = {
-  id: 1,
-  name: 'John Doe',
-  email: 'john@example.com',
-  role: 'Administrator', // Member, MinorStaff, ManagementStaff, Administrator
-  memberId: 1
-};
-
 /**
- * Hook to get current user permissions based on their role
+ * Hook to get current user permissions based on their role from auth context
  */
-export const useUserPermissions = (): UserPermissions & { user: User } => {
-  const [user] = useState<User>(mockUser);
+export const useUserPermissions = (): UserPermissions & { user: any } => {
+  const { user, isAuthenticated } = useAuth(); // Get user from actual auth context
   
+  console.log('🔐 useUserPermissions: Current user:', user?.email);
+  console.log('🔐 useUserPermissions: User role:', user?.role);
+  console.log('🔐 useUserPermissions: Is authenticated:', isAuthenticated);
+
+  // If not authenticated or no user, return no permissions
+  if (!isAuthenticated || !user) {
+    console.log('🔐 useUserPermissions: No auth or user, returning no permissions');
+    return {
+      canEdit: false,
+      canDelete: false,
+      canAdd: false,
+      canBorrow: false,
+      canViewBorrowing: false,
+      canManageUsers: false,
+      user: null
+    };
+  }
+
+  const userRole = user.role || 'Member';
+  console.log('🔐 useUserPermissions: Determining permissions for role:', userRole);
+
+  // Define permissions based on role
   const permissions: UserPermissions = {
-    // Books permissions
-    canEdit: ['ManagementStaff', 'Administrator'].includes(user.role),
-    canDelete: ['ManagementStaff', 'Administrator'].includes(user.role),
-    canAdd: ['ManagementStaff', 'Administrator'].includes(user.role),
+    // Books permissions - Only ManagementStaff and Administrator can manage books
+    canEdit: ['ManagementStaff', 'Administrator'].includes(userRole),
+    canDelete: ['ManagementStaff', 'Administrator'].includes(userRole),
+    canAdd: ['ManagementStaff', 'Administrator'].includes(userRole), // Key permission for Add Book button
     
-    // Borrowing permissions
-    canBorrow: ['Member', 'MinorStaff', 'ManagementStaff', 'Administrator'].includes(user.role),
-    canViewBorrowing: ['MinorStaff', 'ManagementStaff', 'Administrator'].includes(user.role),
+    // Borrowing permissions - All roles can borrow
+    canBorrow: ['Member', 'MinorStaff', 'ManagementStaff', 'Administrator'].includes(userRole),
+    canViewBorrowing: ['MinorStaff', 'ManagementStaff', 'Administrator'].includes(userRole),
     
-    // User management permissions
-    canManageUsers: ['Administrator'].includes(user.role)
+    // User management permissions - Only Administrator
+    canManageUsers: ['Administrator'].includes(userRole)
   };
+
+  console.log('🔐 useUserPermissions: Final permissions for', userRole + ':', permissions);
 
   return {
     ...permissions,
@@ -60,27 +67,24 @@ export const useCanAccess = () => {
   
   return {
     canViewMember: (targetMemberId: number) => {
-      // Staff+ can view any member, regular members can only view themselves
-      if (['MinorStaff', 'ManagementStaff', 'Administrator'].includes(user.role)) {
+      if (['MinorStaff', 'ManagementStaff', 'Administrator'].includes(user?.role || '')) {
         return true;
       }
-      return user.memberId === targetMemberId;
+      return user?.userId === targetMemberId;
     },
     
     canEditMember: (targetMemberId: number) => {
-      // Only Admin can edit any member, members can edit themselves
-      if (user.role === 'Administrator') {
+      if (user?.role === 'Administrator') {
         return true;
       }
-      return user.memberId === targetMemberId;
+      return user?.userId === targetMemberId;
     },
     
     canViewBorrowingHistory: (targetMemberId: number) => {
-      // Staff+ can view any member's history, members can view their own
-      if (['MinorStaff', 'ManagementStaff', 'Administrator'].includes(user.role)) {
+      if (['MinorStaff', 'ManagementStaff', 'Administrator'].includes(user?.role || '')) {
         return true;
       }
-      return user.memberId === targetMemberId;
+      return user?.userId === targetMemberId;
     }
   };
 };

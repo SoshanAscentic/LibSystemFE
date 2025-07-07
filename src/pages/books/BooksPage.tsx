@@ -13,7 +13,7 @@ import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { ConfirmDialog } from '../../components/ui/confirm-dialog';
-import { Grid, List, Search, X } from 'lucide-react';
+import { Grid, List, Search, X, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useBooks } from '../../presentation/hooks/useBooks';
 import { useBooksSearch } from '../../presentation/hooks/useBooksSearch';
@@ -40,7 +40,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Permissions
+  // Permissions - Using actual auth context
   const permissions = useUserPermissions();
 
   // Data hooks
@@ -83,6 +83,11 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
   };
 
   const handleBookAdd = () => {
+    // Double-check permission before allowing add
+    if (!permissions.canAdd) {
+      console.warn('User attempted to add book without permission');
+      return;
+    }
     setModal({ type: 'add' });
   };
 
@@ -122,7 +127,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
     }
   };
 
-  // ✅ FIXED: Removed duplicate code that was causing double deletion
+  // Fixed: Removed duplicate code that was causing double deletion
   const handleConfirmDelete = async () => {
     if (!modal.book) return;
     
@@ -168,7 +173,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Books</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Book Library</h1>
           <p className="text-gray-600 mt-1">
             Manage your library's book collection
           </p>
@@ -183,6 +188,14 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
             {isSearchMode ? <X className="mr-2 h-4 w-4" /> : <Search className="mr-2 h-4 w-4" />}
             {isSearchMode ? 'Exit Search' : 'Search'}
           </Button>
+
+          {/* Conditional Add Book button in header */}
+          {permissions.canAdd && (
+            <Button onClick={handleBookAdd} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Book
+            </Button>
+          )}
 
           {/* View Mode Toggle */}
           <div className="flex rounded-md border">
@@ -263,9 +276,12 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
               onBookEdit={permissions.canEdit ? handleBookEdit : undefined}
               onBookDelete={permissions.canDelete ? handleBookDelete : undefined}
               onBookBorrow={permissions.canBorrow ? handleBookBorrow : undefined}
+              // Conditional Add Book props
+              onAddBook={permissions.canAdd ? handleBookAdd : undefined}
               canEdit={permissions.canEdit}
               canDelete={permissions.canDelete}
               canBorrow={permissions.canBorrow}
+              canAdd={permissions.canAdd}
             />
           )}
         </>
@@ -281,14 +297,25 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
               {modal.type === 'add' ? 'Add New Book' : 'Edit Book'}
             </DialogTitle>
           </DialogHeader>
-          <BookForm
-            initialData={modal.book ? bookToCreateBookDto(modal.book) : undefined}
-            onSubmit={modal.type === 'add' ? handleCreateBook : handleUpdateBook}
-            onCancel={closeModal}
-            isLoading={isSubmitting}
-            title={modal.type === 'add' ? 'Add New Book' : 'Edit Book'}
-            submitText={modal.type === 'add' ? 'Add Book' : 'Update Book'}
-          />
+          
+          {/* Permission check - Don't render add form if user doesn't have permission */}
+          {(modal.type === 'edit' || (modal.type === 'add' && permissions.canAdd)) && (
+            <BookForm
+              initialData={modal.book ? bookToCreateBookDto(modal.book) : undefined}
+              onSubmit={modal.type === 'add' ? handleCreateBook : handleUpdateBook}
+              onCancel={closeModal}
+              isLoading={isSubmitting}
+              title={modal.type === 'add' ? 'Add New Book' : 'Edit Book'}
+              submitText={modal.type === 'add' ? 'Add Book' : 'Update Book'}
+            />
+          )}
+          
+          {/* Show error if user somehow gets to add modal without permission */}
+          {modal.type === 'add' && !permissions.canAdd && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-red-600">You don't have permission to add books.</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

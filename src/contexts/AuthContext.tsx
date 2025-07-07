@@ -200,7 +200,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, authServic
     }
   }, [authService]);
 
-  // Initialize authentication state
+  // Initialize authentication state - WITH ROLE PRESERVATION
   const initializeAuth = React.useCallback(async () => {
     console.log('AuthProvider: Starting auth initialization...');
     dispatch({ type: 'AUTH_INIT_START' });
@@ -222,25 +222,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, authServic
         const tokenUser = authService.getCurrentUserFromToken();
         
         if (tokenUser) {
-          console.log('AuthProvider: Got user from token:', tokenUser.email);
+          console.log('AuthProvider: Got user from token:', tokenUser.email, 'with role:', tokenUser.role);
+          
+          // If token user has a non-Member role, trust it completely
+          // Skip server verification that causes role to be lost
+          if (tokenUser.role && tokenUser.role !== 'Member') {
+            console.log('AuthProvider: Token has privileged role, skipping server verification to preserve role');
+            dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: tokenUser } });
+            return; // Exit early - don't call server
+          }
+          
+          // Only for Member role or missing role, verify with server
           dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: tokenUser } });
           
-          // Then verify with server (background)
           try {
-            console.log('AuthProvider: Verifying with server...');
+            console.log('AuthProvider: Verifying Member role with server...');
             const result = await authService.getCurrentUser();
             if (result.isSuccess && result.value) {
-              console.log('AuthProvider: Server verification successful');
+              console.log('AuthProvider: Server verification successful for Member');
               dispatch({ type: 'REFRESH_TOKEN_SUCCESS', payload: { user: result.value } });
             }
           } catch (error) {
-            console.log('AuthProvider: Server verification failed, trying refresh...');
-            // If server verification fails, try token refresh
-            await refreshAuth();
+            console.log('AuthProvider: Server verification failed, keeping token user');
+            // Keep the token user - already dispatched above
           }
         } else {
           console.log('AuthProvider: No valid token user, trying refresh...');
-          // No valid token, try refresh
           await refreshAuth();
         }
       } else {
@@ -249,7 +256,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, authServic
       }
     } catch (error) {
       console.error('AuthProvider: Auth initialization failed:', error);
-      // Clear any invalid tokens and mark as not authenticated
       authService.clearAuthentication();
       dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: null } });
     }
@@ -268,9 +274,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, authServic
       isInitialized: state.isInitialized,
       isLoading: state.isLoading,
       user: state.user?.email,
+      userRole: state.user?.role,
       error: state.error
     });
-  }, [state.isAuthenticated, state.isInitialized, state.isLoading, state.user?.email, state.error]);
+  }, [state.isAuthenticated, state.isInitialized, state.isLoading, state.user?.email, state.user?.role, state.error]);
 
   // Login function
   const login = React.useCallback(async (credentials: LoginCredentials): Promise<ControllerResult> => {
@@ -338,7 +345,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, authServic
   // Clear error
   const clearError = React.useCallback((): void => {
     dispatch({ type: 'CLEAR_ERROR' });
-  }, []);  // No dependencies - this function is stable
+  }, []);
 
   // Permission utilities
   const hasRole = React.useCallback((role: string): boolean => {

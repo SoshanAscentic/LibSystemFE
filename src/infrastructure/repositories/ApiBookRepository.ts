@@ -106,15 +106,61 @@ export class ApiBookRepository implements IBookRepository {
 
   async delete(id: number): Promise<Result<void, Error>> {
     try {
-      const response = await this.apiClient.delete<void>(`/api/books/${id}`);
+      console.log('🌐 ApiBookRepository: Making DELETE request for book ID:', id);
       
+      const response = await this.apiClient.delete<void>(`/api/books/${id}`);
+      console.log('🌐 ApiBookRepository: DELETE response:', response.data);
+      
+      // Check if the response indicates success
       if (response.data.success) {
+        console.log('🌐 ApiBookRepository: Delete successful');
         return Result.success(undefined);
       } else {
-        return Result.failure(new Error(response.data.error?.message || 'Failed to delete book'));
+        console.error('🌐 ApiBookRepository: API returned success: false');
+        const errorMessage = response.data.error?.message || 'Delete operation failed';
+        console.error('🌐 ApiBookRepository: Error message:', errorMessage);
+        return Result.failure(new Error(errorMessage));
       }
     } catch (error: any) {
-      return Result.failure(new Error(error.message || 'Network error while deleting book'));
+      console.error('🌐 ApiBookRepository: DELETE request failed:', error);
+      
+      // Handle different HTTP status codes
+      if (error.response) {
+        const status = error.response.status;
+        console.log('🌐 ApiBookRepository: HTTP status:', status);
+        console.log('🌐 ApiBookRepository: Response data:', error.response.data);
+        
+        switch (status) {
+          case 404:
+            // Book not found - this might actually be success if it's already deleted
+            console.warn('🌐 ApiBookRepository: Book not found (404) - might already be deleted');
+            return Result.success(undefined); // Treat as success
+            
+          case 400:
+            const badRequestMessage = error.response.data?.error?.message || 
+                                    error.response.data?.message || 
+                                    'Bad request';
+            return Result.failure(new Error(badRequestMessage));
+            
+          case 403:
+            return Result.failure(new Error('Access denied - insufficient permissions'));
+            
+          case 409:
+            return Result.failure(new Error('Cannot delete book - it may be borrowed or have dependencies'));
+            
+          case 500:
+            return Result.failure(new Error('Server error occurred while deleting book'));
+            
+          default:
+            return Result.failure(new Error(`HTTP ${status}: ${error.response.data?.message || 'Delete failed'}`));
+        }
+      } else if (error.request) {
+        console.error('🌐 ApiBookRepository: Network error - no response received');
+        return Result.failure(new Error('Network error - could not reach server'));
+      } else {
+        console.error('🌐 ApiBookRepository: Request setup error:', error.message);
+        return Result.failure(new Error(`Request error: ${error.message}`));
+      }
     }
   }
 
