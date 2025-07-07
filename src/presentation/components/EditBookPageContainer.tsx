@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { EditBookPage } from '../../pages/books/EditBookPage';
-import { useBooksController } from '../hooks/useBooksController';
+import { useBooksController } from '../hooks/Books/useBooksController';
 
 export const EditBookPageContainer: React.FC = () => {
   const { id } = useParams<{ id: string }>();

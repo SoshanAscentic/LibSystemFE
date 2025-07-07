@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Book } from '../../domain/entities/Book';
+import { Book } from '../../../domain/entities/Book';
 import { useBooksController } from './useBooksController';
 
 interface UseBookResult {

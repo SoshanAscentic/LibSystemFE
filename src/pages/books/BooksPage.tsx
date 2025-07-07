@@ -15,8 +15,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { ConfirmDialog } from '../../components/ui/confirm-dialog';
 import { Grid, List, Search, X, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { useBooks } from '../../presentation/hooks/useBooks';
-import { useBooksSearch } from '../../presentation/hooks/useBooksSearch';
+import { useBooks } from '../../presentation/hooks/Books/useBooks';
+import { useBooksSearch } from '../../presentation/hooks/Books/useBooksSearch';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
 import { bookToCreateBookDto } from '../../utils/bookUtils';
 

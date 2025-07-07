@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Book } from '../../domain/entities/Book';
-import { BookFilters, BookSorting, BookPagination } from '../../domain/valueObjects/BookFilters';
+import { Book } from '../../../domain/entities/Book';
+import { BookFilters, BookSorting, BookPagination } from '../../../domain/valueObjects/BookFilters';
 import { useBooksController } from './useBooksController';
 
 interface UseBooksResult {

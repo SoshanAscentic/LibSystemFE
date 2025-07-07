@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Book } from '../../domain/entities/Book';
-import { BookFilters } from '../../domain/valueObjects/BookFilters';
-import { useDebounce } from '../../hooks/ui/useDebounce';
+import { Book } from '../../../domain/entities/Book';
+import { BookFilters } from '../../../domain/valueObjects/BookFilters';
+import { useDebounce } from '../../../hooks/ui/useDebounce';
 import { useBooksController } from './useBooksController';
 import React from 'react';
 

@@ -6,7 +6,7 @@ import { LoadingState } from '../../components/molecules/LoadingState';
 import { EmptyState } from '../../components/molecules/EmptyState';
 import { Button } from '../../components/ui/button';
 import { ArrowLeft, BookOpen } from 'lucide-react';
-import { useBook } from '../../presentation/hooks/useBook';
+import { useBook } from '../../presentation/hooks/Books/useBook';
 import { bookToCreateBookDto } from '../../utils/bookUtils';
 
 interface EditBookPageProps {
