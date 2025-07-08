@@ -1,10 +1,8 @@
-//src/application/controllers/MembersController.ts
 import { ControllerResult } from '../../shared/interfaces/common';
 import { INavigationService, INotificationService } from '../../shared/interfaces/services';
 import { MemberService } from '../../domain/services/MemberService';
 import { Member } from '../../domain/entities/Member';
-import { CreateMemberDto, UpdateMemberDto } from '../../domain/dtos/MemberDto';
-import { MemberFilters, MemberSorting, MemberPagination } from '../../domain/valueObjects/MemberFilters';
+import { RegisterMemberDto } from '../../domain/dtos/MemberDto';
 
 export class MembersController {
   constructor(
@@ -13,12 +11,8 @@ export class MembersController {
     private notificationService: INotificationService
   ) {}
 
-  async handleGetAllMembers(
-    filters?: MemberFilters,
-    sorting?: MemberSorting,
-    pagination?: MemberPagination
-  ): Promise<{ members: Member[]; success: boolean; error?: string }> {
-    const result = await this.memberService.getAllMembers(filters, sorting, pagination);
+  async handleGetAllMembers(): Promise<{ members: Member[]; success: boolean; error?: string }> {
+    const result = await this.memberService.getAllMembers();
 
     if (result.isSuccess) {
       return {
@@ -59,12 +53,12 @@ export class MembersController {
     }
   }
 
-  async handleCreateMember(data: CreateMemberDto): Promise<ControllerResult> {
-    const result = await this.memberService.createMember(data);
+  async handleRegisterMember(data: RegisterMemberDto): Promise<ControllerResult> {
+    const result = await this.memberService.registerMember(data);
 
     if (result.isSuccess) {
       this.notificationService.showSuccess(
-        'Member created successfully',
+        'Member registered successfully',
         `${result.value.fullName} has been added to the library`
       );
       
@@ -74,70 +68,11 @@ export class MembersController {
       return ControllerResult.success(result.value);
     } else {
       this.notificationService.showError(
-        'Failed to create member',
+        'Failed to register member',
         result.error.message
       );
       
       return ControllerResult.failure(result.error.message);
-    }
-  }
-
-  async handleUpdateMember(id: number, data: UpdateMemberDto): Promise<ControllerResult> {
-    const result = await this.memberService.updateMember(id, data);
-
-    if (result.isSuccess) {
-      this.notificationService.showSuccess(
-        'Member updated successfully',
-        `${result.value.fullName}'s information has been updated`
-      );
-      
-      return ControllerResult.success(result.value);
-    } else {
-      this.notificationService.showError(
-        'Failed to update member',
-        result.error.message
-      );
-      
-      return ControllerResult.failure(result.error.message);
-    }
-  }
-
-  async handleDeleteMember(member: Member): Promise<ControllerResult> {
-    const result = await this.memberService.deleteMember(member.memberId);
-
-    if (result.isSuccess) {
-      this.notificationService.showSuccess(
-        'Member deleted successfully',
-        `${member.fullName} has been removed from the library`
-      );
-      
-      return ControllerResult.success();
-    } else {
-      this.notificationService.showError(
-        'Failed to delete member',
-        result.error.message
-      );
-      
-      return ControllerResult.failure(result.error.message);
-    }
-  }
-
-  async handleSearchMembers(query: string, filters?: MemberFilters): Promise<{ members: Member[]; success: boolean; error?: string }> {
-    const result = await this.memberService.searchMembers(query, filters);
-
-    if (result.isSuccess) {
-      return {
-        members: result.value,
-        success: true
-      };
-    } else {
-      // For search errors, we might not want to show notifications
-      // as they can be noisy while user is typing
-      return {
-        members: [],
-        success: false,
-        error: result.error.message
-      };
     }
   }
 
@@ -148,7 +83,6 @@ export class MembersController {
 
   handleNavigateToAddMember(): void {
     this.navigationService.navigateToMembers();
-    // The specific routing to /members/add will be handled by the navigation service
   }
 
   handleNavigateToMembers(): void {

@@ -1,9 +1,9 @@
 import { ValidationResult } from '../../shared/interfaces/common';
-import { CreateMemberDto } from '../dtos/MemberDto';
+import { RegisterMemberDto } from '../dtos/MemberDto';
 
 export class MemberValidationService {
   
-  validateCreateMember(data: CreateMemberDto): ValidationResult {
+  validateRegisterMember(data: RegisterMemberDto): ValidationResult {
     const errors: string[] = [];
 
     // First name validation
@@ -33,24 +33,27 @@ export class MemberValidationService {
       errors.push('Email must be less than 255 characters');
     }
 
+    // Password validation
+    if (!data.password?.trim()) {
+      errors.push('Password is required');
+    } else if (data.password.trim().length < 8) {
+      errors.push('Password must be at least 8 characters long');
+    } else if (data.password.trim().length > 100) {
+      errors.push('Password must be less than 100 characters');
+    }
+
+    // Confirm password validation
+    if (!data.confirmPassword?.trim()) {
+      errors.push('Confirm password is required');
+    } else if (data.password !== data.confirmPassword) {
+      errors.push('Passwords do not match');
+    }
+
     // Member type validation
     if (data.memberType === undefined || data.memberType === null) {
       errors.push('Member type is required');
     } else if (![0, 1, 2].includes(data.memberType)) {
       errors.push('Invalid member type');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  }
-
-  validateSearchQuery(query: string): ValidationResult {
-    const errors: string[] = [];
-
-    if (query && query.length < 2) {
-      errors.push('Search query must be at least 2 characters long');
     }
 
     return {

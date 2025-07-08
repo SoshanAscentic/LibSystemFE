@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Member } from '../../domain/entities/Member';
+import { Member } from '../../../domain/entities/Member';
 import { useMembersController } from './useMembersController';
 
 interface UseMemberResult {

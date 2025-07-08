@@ -103,7 +103,7 @@ export class BooksController {
 
   async handleDeleteBook(book: Book): Promise<ControllerResult> {
   try {
-    console.log('🗑️ BooksController: Starting delete for book:', book.bookId, book.title);
+    console.log('BooksController: Starting delete for book:', book.bookId, book.title);
     
     const result = await this.bookService.deleteBook(book.bookId);
     console.log('🗑️ BooksController: Service result:', result);

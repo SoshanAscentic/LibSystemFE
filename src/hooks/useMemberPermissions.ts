@@ -3,8 +3,6 @@ import { Member, UserRole } from '../domain/entities/Member';
 
 interface MemberPermissions {
   canView: boolean;
-  canEdit: boolean;
-  canDelete: boolean;
   canAdd: boolean;
   canViewBorrowingHistory: boolean;
   canManageUsers: boolean;
@@ -25,8 +23,6 @@ export const useMemberPermissions = (): MemberPermissions & { user: any } => {
     console.log('🔐 useMemberPermissions: No auth or user, returning no permissions');
     return {
       canView: false,
-      canEdit: false,
-      canDelete: false,
       canAdd: false,
       canViewBorrowingHistory: false,
       canManageUsers: false,
@@ -42,9 +38,7 @@ export const useMemberPermissions = (): MemberPermissions & { user: any } => {
     // Member viewing permissions - MinorStaff and above can view members
     canView: ['MinorStaff', 'ManagementStaff', 'Administrator'].includes(userRole),
     
-    // Member editing permissions - Only Administrator can edit members
-    canEdit: ['Administrator'].includes(userRole),
-    canDelete: ['Administrator'].includes(userRole),
+    // Member registration permissions - Only Administrator can add members
     canAdd: ['Administrator'].includes(userRole),
     
     // Borrowing history - Staff and above can view borrowing history
@@ -81,16 +75,6 @@ export const useCanAccessMember = () => {
       }
       
       // Members can only view themselves
-      return user?.userId === targetMember.memberId;
-    },
-    
-    canEditMember: (targetMember: Member) => {
-      // Only administrators can edit members
-      if (user?.role === 'Administrator') {
-        return true;
-      }
-      
-      // Members can edit their own profile (basic info only)
       return user?.userId === targetMember.memberId;
     },
     

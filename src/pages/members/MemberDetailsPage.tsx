@@ -28,12 +28,6 @@ export const MemberDetailsPage: React.FC<MemberDetailsPageProps> = ({ memberId, 
     }
   };
 
-  const handleDelete = async () => {
-    if (member) {
-      await controller.handleDeleteMember(member);
-    }
-  };
-
   if (isLoading) {
     return <LoadingState message="Loading member details..." />;
   }
@@ -68,15 +62,6 @@ export const MemberDetailsPage: React.FC<MemberDetailsPageProps> = ({ memberId, 
           Back to Members
         </Button>
       </div>
-
-      {/* Member Details */}
-      <MemberDetails
-        member={member}
-        onEdit={permissions.canEdit ? handleEdit : undefined}
-        onDelete={permissions.canDelete ? handleDelete : undefined}
-        canEdit={permissions.canEdit}
-        canDelete={permissions.canDelete}
-      />
     </div>
   );
 };

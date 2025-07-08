@@ -1,9 +1,7 @@
 import React from 'react';
 import { Member } from '../../../domain/entities/Member';
-import { MemberFilters as MemberFiltersType } from '../../../domain/valueObjects/MemberFilters';
 import { LoadingState } from '../../molecules/LoadingState';
 import { EmptyState } from '../../molecules/EmptyState';
-import { MemberFilters } from '../../molecules/MemberFilters';
 import { MemberCard } from '../../molecules/MemberCard';
 import { Button } from '../../ui/button';
 import { User, Plus } from 'lucide-react';
@@ -11,15 +9,8 @@ import { User, Plus } from 'lucide-react';
 interface MembersGridProps {
   members: Member[];
   isLoading: boolean;
-  filters: MemberFiltersType;
-  onFiltersChange: (filters: Partial<MemberFiltersType>) => void;
-  onClearFilters: () => void;
   onMemberView?: (member: Member) => void;
-  onMemberEdit?: (member: Member) => void;
-  onMemberDelete?: (member: Member) => void;
   onAddMember?: () => void;
-  canEdit?: boolean;
-  canDelete?: boolean;
   canAdd?: boolean;
   className?: string;
 }
@@ -27,15 +18,8 @@ interface MembersGridProps {
 export const MembersGrid: React.FC<MembersGridProps> = ({
   members,
   isLoading,
-  filters,
-  onFiltersChange,
-  onClearFilters,
   onMemberView,
-  onMemberEdit,
-  onMemberDelete,
   onAddMember,
-  canEdit = false,
-  canDelete = false,
   canAdd = false,
   className
 }) => {
@@ -45,22 +29,19 @@ export const MembersGrid: React.FC<MembersGridProps> = ({
 
   return (
     <div className={className}>
-      {/* Filters and Actions */}
-      <div className="space-y-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <MemberFilters
-            filters={filters}
-            onFiltersChange={onFiltersChange}
-            onClearFilters={onClearFilters}
-          />
-          
-          {canAdd && onAddMember && (
-            <Button onClick={onAddMember} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add Member
-            </Button>
-          )}
+      {/* Header with Add Button */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">Library Members</h2>
+          <p className="text-gray-600 mt-1">{members.length} member{members.length !== 1 ? 's' : ''} registered</p>
         </div>
+        
+        {canAdd && onAddMember && (
+          <Button onClick={onAddMember} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Register New Member
+          </Button>
+        )}
       </div>
 
       {/* Grid */}
@@ -68,9 +49,9 @@ export const MembersGrid: React.FC<MembersGridProps> = ({
         <EmptyState
           icon={<User className="w-12 h-12" />}
           title="No members found"
-          description="No members match your current filters."
+          description="No members are currently registered in the system."
           action={canAdd ? {
-            label: "Add First Member",
+            label: "Register First Member",
             onClick: onAddMember || (() => {})
           } : undefined}
         />
@@ -81,10 +62,6 @@ export const MembersGrid: React.FC<MembersGridProps> = ({
               key={member.memberId}
               member={member}
               onView={onMemberView}
-              onEdit={onMemberEdit}
-              onDelete={onMemberDelete}
-              canEdit={canEdit}
-              canDelete={canDelete}
             />
           ))}
         </div>

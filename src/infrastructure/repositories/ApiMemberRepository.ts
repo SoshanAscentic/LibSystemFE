@@ -1,26 +1,14 @@
 import { IMemberRepository } from '../../domain/repositories/IMemberRepository';
-import { Member, MemberStatistics } from '../../domain/entities/Member';
-import { CreateMemberDto, UpdateMemberDto } from '../../domain/dtos/MemberDto';
-import { MemberFilters, MemberSorting, MemberPagination } from '../../domain/valueObjects/MemberFilters';
+import { Member } from '../../domain/entities/Member';
 import { Result } from '../../shared/types/Result';
-import { MembersApiService } from '../api/MembersApiService';
+import { MembersApiService, RegisterMemberDto } from '../api/MembersApiService';
 
 export class ApiMemberRepository implements IMemberRepository {
   constructor(private membersApiService: MembersApiService) {}
 
-  async findAll(
-    filters?: MemberFilters,
-    sorting?: MemberSorting,
-    pagination?: MemberPagination
-  ): Promise<Result<Member[], Error>> {
+  async findAll(): Promise<Result<Member[], Error>> {
     try {
-      const apiFilters = {
-        ...filters,
-        ...sorting,
-        ...pagination
-      };
-
-      return await this.membersApiService.getAllMembers(apiFilters);
+      return await this.membersApiService.getAllMembers();
     } catch (error: any) {
       return Result.failure(new Error(error.message || 'Network error while fetching members'));
     }
@@ -34,51 +22,14 @@ export class ApiMemberRepository implements IMemberRepository {
     }
   }
 
-  async search(query: string, filters?: MemberFilters): Promise<Result<Member[], Error>> {
+  async registerMember(data: RegisterMemberDto): Promise<Result<Member, Error>> {
     try {
-      return await this.membersApiService.searchMembers(query, filters);
+      return await this.membersApiService.registerMember(data);
     } catch (error: any) {
-      return Result.failure(new Error(error.message || 'Network error while searching members'));
-    }
-  }
-
-  async create(data: CreateMemberDto): Promise<Result<Member, Error>> {
-    try {
-      return await this.membersApiService.createMember(data);
-    } catch (error: any) {
-      return Result.failure(new Error(error.message || 'Network error while creating member'));
-    }
-  }
-
-  async update(id: number, data: UpdateMemberDto): Promise<Result<Member, Error>> {
-    try {
-      return await this.membersApiService.updateMember(id, data);
-    } catch (error: any) {
-      return Result.failure(new Error(error.message || 'Network error while updating member'));
-    }
-  }
-
-  async delete(id: number): Promise<Result<void, Error>> {
-    try {
-      return await this.membersApiService.deleteMember(id);
-    } catch (error: any) {
-      return Result.failure(new Error(error.message || 'Network error while deleting member'));
-    }
-  }
-
-  async getMemberStatistics(id: number): Promise<Result<MemberStatistics, Error>> {
-    try {
-      return await this.membersApiService.getMemberStatistics(id);
-    } catch (error: any) {
-      return Result.failure(new Error(error.message || 'Network error while getting member statistics'));
-    }
-  }
-
-  async getMemberBorrowingHistory(id: number): Promise<Result<Member, Error>> {
-    try {
-      return await this.membersApiService.getMemberBorrowingHistory(id);
-    } catch (error: any) {
-      return Result.failure(new Error(error.message || 'Network error while getting member borrowing history'));
+      return Result.failure(new Error(error.message || 'Network error while registering member'));
     }
   }
 }
+
+// Export the DTO type
+export type { RegisterMemberDto };

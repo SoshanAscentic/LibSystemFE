@@ -1,4 +1,3 @@
-// src/components/organisms/Sidebar/Sidebar.tsx
 import * as React from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { Button } from "@/components/atoms/Button"
@@ -72,14 +71,14 @@ const menuItems: MenuItem[] = [
     icon: <Users className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/members',
     roles: ['MinorStaff', 'ManagementStaff', 'Administrator'],
-    implemented: false,
+    implemented: true, // NOW IMPLEMENTED!
     children: [
       { 
         id: 'all-members', 
         label: 'All Members', 
         icon: <Users className="w-4 h-4 flex-shrink-0 text-black" />, 
         path: '/members',
-        implemented: false
+        implemented: true // NOW IMPLEMENTED!
       },
       { 
         id: 'add-member', 
@@ -87,7 +86,7 @@ const menuItems: MenuItem[] = [
         icon: <Users className="w-4 h-4 flex-shrink-0 text-black" />, 
         path: '/members/add', 
         roles: ['Administrator'],
-        implemented: false
+        implemented: true // NOW IMPLEMENTED!
       }
     ]
   },
@@ -169,7 +168,7 @@ export function Sidebar({
 }: SidebarProps) {
   const navigate = useNavigate()
   const location = useLocation()
-  const [expandedItems, setExpandedItems] = React.useState<string[]>(['books', 'borrowing'])
+  const [expandedItems, setExpandedItems] = React.useState<string[]>(['books', 'members', 'borrowing'])
 
   const hasPermission = (roles?: string[]) => {
     if (!roles || roles.length === 0) return true
@@ -199,7 +198,6 @@ export function Sidebar({
   }
 
   const getFeaturePhase = (path: string): string => {
-    if (path.startsWith('/members')) return 'Phase 5'
     if (path.startsWith('/borrowing')) return 'Phase 6'
     if (path.startsWith('/analytics')) return 'Phase 8'
     if (path.startsWith('/admin')) return 'Phase 7'

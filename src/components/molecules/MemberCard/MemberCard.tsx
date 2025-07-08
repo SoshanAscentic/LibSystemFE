@@ -3,8 +3,7 @@ import { Member } from '../../../domain/entities/Member';
 import { Card } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
-import { User, Edit, Trash2, MoreHorizontal, BookOpen, Calendar } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../ui/dropdown-menu';
+import { User, BookOpen, Calendar } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { formatDate } from '../../../lib/utils';
 
@@ -12,10 +11,6 @@ interface MemberCardProps {
   member: Member;
   variant?: 'default' | 'compact' | 'detailed';
   onView?: (member: Member) => void;
-  onEdit?: (member: Member) => void;
-  onDelete?: (member: Member) => void;
-  canEdit?: boolean;
-  canDelete?: boolean;
   className?: string;
 }
 
@@ -49,14 +44,17 @@ export const MemberCard: React.FC<MemberCardProps> = ({
   member,
   variant = 'default',
   onView,
-  onEdit,
-  onDelete,
-  canEdit = false,
-  canDelete = false,
   className
 }) => {
   const isCompact = variant === 'compact';
   const isDetailed = variant === 'detailed';
+
+  // Debug logging
+  console.log('🎯 MemberCard: Rendering member:', member);
+
+  // Safely get member display name
+  const displayName = member.fullName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown Member';
+  const displayEmail = member.email || 'No email provided';
 
   return (
     <Card className={cn(
@@ -77,50 +75,16 @@ export const MemberCard: React.FC<MemberCardProps> = ({
               isCompact && 'text-sm',
               isDetailed && 'text-lg'
             )}>
-              {member.fullName}
+              {displayName}
             </h3>
             <p className={cn(
-              'text-gray-600 truncate mt-1',
+              'text-gray-500 truncate mt-1',
               isCompact && 'text-xs',
               'text-sm'
             )}>
-              {member.email}
+              ID: {member.memberId}
             </p>
           </div>
-
-          {/* Actions Menu */}
-          {(canEdit || canDelete || onView) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {onView && (
-                  <DropdownMenuItem onClick={() => onView(member)}>
-                    <User className="mr-2 h-4 w-4" />
-                    View Details
-                  </DropdownMenuItem>
-                )}
-                {canEdit && onEdit && (
-                  <DropdownMenuItem onClick={() => onEdit(member)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit Member
-                  </DropdownMenuItem>
-                )}
-                {canDelete && onDelete && (
-                  <DropdownMenuItem 
-                    onClick={() => onDelete(member)}
-                    className="text-red-600"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Member
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
 
         {/* Member Details */}
@@ -166,8 +130,8 @@ export const MemberCard: React.FC<MemberCardProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 mt-4">
-          {onView && (
+        {onView && (
+          <div className="flex gap-2 mt-4">
             <Button 
               variant="outline" 
               size={isCompact ? "sm" : "default"}
@@ -175,10 +139,10 @@ export const MemberCard: React.FC<MemberCardProps> = ({
               className="flex-1"
             >
               <User className="mr-2 h-4 w-4" />
-              View
+              View Details
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </Card>
   );

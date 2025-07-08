@@ -1,56 +1,55 @@
 import { ApiClient, ApiResponse } from './ApiClient';
 import { Result } from '../../shared/types/Result';
-import { Member, MemberType, UserRole, MemberStatistics } from '../../domain/entities/Member';
-import { CreateMemberDto, UpdateMemberDto, MemberFiltersDto } from '../../domain/dtos/MemberDto';
+import { Member, MemberType, UserRole } from '../../domain/entities/Member';
 
-// Backend response interface (what your backend actually returns)
+// Backend response interface
 interface BackendMemberResponse {
-  memberId: number;
-  firstName: string;
-  lastName: string;
-  fullName: string;
-  email: string;
-  memberType: string; // Backend returns string
-  role: string;
+  memberID: number;        // Note: backend uses "memberID" not "memberId"
+  name: string;           // Note: backend uses "name" not separate firstName/lastName
+  email?: string;         // Email might be optional
+  memberType: string;
+  role?: string;
   isActive: boolean;
-  registrationDate: string;
+  registrationDate?: string;
   borrowedBooksCount: number;
   canBorrowBooks: boolean;
-  canViewBooks: boolean;
-  canViewMembers: boolean;
-  canManageBooks: boolean;
+  canViewBooks?: boolean;
+  canViewMembers?: boolean;
+  canManageBooks?: boolean;
   currentLoans?: any[];
   borrowingHistory?: any[];
   [key: string]: any;
+}
+
+// Registration DTO for /api/auth/register
+interface RegisterMemberDto {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  memberType: number; // 0=RegularMember, 1=MinorStaff, 2=ManagementStaff
 }
 
 export class MembersApiService {
   constructor(private apiClient: ApiClient) {}
 
   /**
-   * Get all members with optional filters
+   * Get all members (no filtering)
    */
-  async getAllMembers(filters?: MemberFiltersDto): Promise<Result<Member[], Error>> {
+  async getAllMembers(): Promise<Result<Member[], Error>> {
     try {
-      console.log('👥 MembersApiService: Getting all members with filters:', filters);
+      console.log('👥 MembersApiService: Getting all members');
       
-      const response = await this.apiClient.get('/api/members', { params: filters });
+      const response = await this.apiClient.get('/api/members');
       
-      console.log('👥 MembersApiService: ===== FULL MEMBERS RESPONSE =====');
       console.log('👥 MembersApiService: Response:', response.data);
       
       if (response.data.success) {
         const backendMembers: BackendMemberResponse[] = response.data.data as BackendMemberResponse[];
-        console.log('👥 MembersApiService: Backend members data:', backendMembers);
-        
-        // Map backend response to domain entities
-        const members = backendMembers.map(this.mapBackendResponseToMember);
-        
-        console.log('👥 MembersApiService: Mapped members:', members);
-        
+        const members = backendMembers.map(member => this.mapBackendResponseToMember(member));
         return Result.success(members);
       } else {
-        console.error('👥 MembersApiService: API returned success: false');
         return Result.failure(new Error(response.data.error?.message || 'Failed to fetch members'));
       }
     } catch (error: any) {
@@ -68,19 +67,14 @@ export class MembersApiService {
       
       const response = await this.apiClient.get(`/api/members/${id}`);
       
-      console.log('👥 MembersApiService: Member by ID response:', response.data);
-      
       if (response.data.success) {
         const backendMember: BackendMemberResponse = response.data.data as BackendMemberResponse;
-        console.log('👥 MembersApiService: Backend member data:', backendMember);
         
         if (!backendMember) {
           return Result.success(null);
         }
         
         const member = this.mapBackendResponseToMember(backendMember);
-        console.log('👥 MembersApiService: Mapped member:', member);
-        
         return Result.success(member);
       } else {
         if (response.data.error?.code === 'NOT_FOUND') {
@@ -97,179 +91,30 @@ export class MembersApiService {
   }
 
   /**
-   * Create new member
+   * Register new member using /api/auth/register
    */
-  async createMember(data: CreateMemberDto): Promise<Result<Member, Error>> {
+  async registerMember(data: RegisterMemberDto): Promise<Result<Member, Error>> {
     try {
-      console.log('👥 MembersApiService: Creating member with data:', { 
+      console.log('👥 MembersApiService: Registering member:', { 
         ...data, 
-        password: data.password ? '[HIDDEN]' : undefined 
+        password: '[HIDDEN]',
+        confirmPassword: '[HIDDEN]'
       });
       
-      const response = await this.apiClient.post('/api/members', data);
+      const response = await this.apiClient.post('/api/auth/register', data);
       
-      console.log('👥 MembersApiService: Create member response:', response.data);
-      
-      if (response.data.success) {
-        const backendMember: BackendMemberResponse = response.data.data as BackendMemberResponse;
-        const member = this.mapBackendResponseToMember(backendMember);
-        
-        console.log('👥 MembersApiService: Created member:', member);
-        
-        return Result.success(member);
-      } else {
-        console.error('👥 MembersApiService: Create member failed:', response.data.error?.message);
-        return Result.failure(new Error(response.data.error?.message || 'Failed to create member'));
-      }
-    } catch (error: any) {
-      console.error('👥 MembersApiService: Create member error:', error);
-      return this.handleApiError(error, 'create member');
-    }
-  }
-
-  /**
-   * Update member
-   */
-  async updateMember(id: number, data: UpdateMemberDto): Promise<Result<Member, Error>> {
-    try {
-      console.log('👥 MembersApiService: Updating member ID:', id, 'with data:', data);
-      
-      const response = await this.apiClient.put(`/api/members/${id}`, data);
-      
-      console.log('👥 MembersApiService: Update member response:', response.data);
+      console.log('👥 MembersApiService: Register response:', response.data);
       
       if (response.data.success) {
         const backendMember: BackendMemberResponse = response.data.data as BackendMemberResponse;
         const member = this.mapBackendResponseToMember(backendMember);
-        
         return Result.success(member);
       } else {
-        return Result.failure(new Error(response.data.error?.message || 'Failed to update member'));
+        return Result.failure(new Error(response.data.error?.message || 'Failed to register member'));
       }
     } catch (error: any) {
-      return this.handleApiError(error, 'update member');
-    }
-  }
-
-  /**
-   * Delete member
-   */
-  async deleteMember(id: number): Promise<Result<void, Error>> {
-    try {
-      console.log('🌐 MembersApiService: Making DELETE request for member ID:', id);
-      
-      const response = await this.apiClient.delete(`/api/members/${id}`);
-      console.log('🌐 MembersApiService: DELETE response:', response.data);
-      
-      // Check if the response indicates success
-      if (response.data.success) {
-        console.log('🌐 MembersApiService: Delete successful');
-        return Result.success(undefined);
-      } else {
-        console.error('🌐 MembersApiService: API returned success: false');
-        const errorMessage = response.data.error?.message || 'Delete operation failed';
-        console.error('🌐 MembersApiService: Error message:', errorMessage);
-        return Result.failure(new Error(errorMessage));
-      }
-    } catch (error: any) {
-      console.error('🌐 MembersApiService: DELETE request failed:', error);
-      
-      // Handle different HTTP status codes
-      if (error.response) {
-        const status = error.response.status;
-        console.log('🌐 MembersApiService: HTTP status:', status);
-        console.log('🌐 MembersApiService: Response data:', error.response.data);
-        
-        switch (status) {
-          case 404:
-            console.warn('🌐 MembersApiService: Member not found (404) - might already be deleted');
-            return Result.success(undefined);
-            
-          case 400:
-            const badRequestMessage = error.response.data?.error?.message || 
-                                    error.response.data?.message || 
-                                    'Bad request';
-            return Result.failure(new Error(badRequestMessage));
-            
-          case 403:
-            return Result.failure(new Error('Access denied - insufficient permissions'));
-            
-          case 409:
-            return Result.failure(new Error('Cannot delete member - they may have active borrowings or dependencies'));
-            
-          case 500:
-            return Result.failure(new Error('Server error occurred while deleting member'));
-            
-          default:
-            return Result.failure(new Error(`HTTP ${status}: ${error.response.data?.message || 'Delete failed'}`));
-        }
-      } else if (error.request) {
-        console.error('🌐 MembersApiService: Network error - no response received');
-        return Result.failure(new Error('Network error - could not reach server'));
-      } else {
-        console.error('🌐 MembersApiService: Request setup error:', error.message);
-        return Result.failure(new Error(`Request error: ${error.message}`));
-      }
-    }
-  }
-
-  /**
-   * Search members
-   */
-  async searchMembers(query: string, filters?: MemberFiltersDto): Promise<Result<Member[], Error>> {
-    try {
-      const searchFilters = { search: query, ...filters };
-      console.log('👥 MembersApiService: Searching members with query:', query, 'and filters:', searchFilters);
-      
-      const response = await this.apiClient.get('/api/members', { params: searchFilters });
-      
-      if (response.data.success) {
-        const backendMembers: BackendMemberResponse[] = response.data.data as BackendMemberResponse[];
-        const members = backendMembers.map(this.mapBackendResponseToMember);
-        
-        return Result.success(members);
-      } else {
-        return Result.failure(new Error(response.data.error?.message || 'Failed to search members'));
-      }
-    } catch (error: any) {
-      return this.handleApiError(error, 'search members');
-    }
-  }
-
-  /**
-   * Get member statistics
-   */
-  async getMemberStatistics(id: number): Promise<Result<MemberStatistics, Error>> {
-    try {
-      const response = await this.apiClient.get(`/api/members/${id}/statistics`);
-      
-      if (response.data.success) {
-        return Result.success(response.data.data as MemberStatistics);
-      } else {
-        return Result.failure(new Error(response.data.error?.message || 'Failed to get member statistics'));
-      }
-    } catch (error: any) {
-      return this.handleApiError(error, 'get member statistics');
-    }
-  }
-
-  /**
-   * Get member borrowing history
-   */
-  async getMemberBorrowingHistory(id: number): Promise<Result<Member, Error>> {
-    try {
-      const response = await this.apiClient.get(`/api/members/${id}/borrowing-history`);
-      
-      if (response.data.success) {
-        const backendMember: BackendMemberResponse = response.data.data as BackendMemberResponse;
-        const member = this.mapBackendResponseToMember(backendMember);
-        
-        return Result.success(member);
-      } else {
-        return Result.failure(new Error(response.data.error?.message || 'Failed to get member borrowing history'));
-      }
-    } catch (error: any) {
-      return this.handleApiError(error, 'get member borrowing history');
+      console.error('👥 MembersApiService: Register member error:', error);
+      return this.handleApiError(error, 'register member');
     }
   }
 
@@ -277,22 +122,27 @@ export class MembersApiService {
    * Map backend response to domain Member entity
    */
   private mapBackendResponseToMember(backendData: BackendMemberResponse): Member {
-    console.log('👥 MembersApiService: Mapping backend data:', backendData);
-    
     try {
       if (!backendData) {
         throw new Error('Backend member data is null or undefined');
       }
 
-      // Map member type from string to enum
+      console.log('👥 MembersApiService: Mapping backend data:', backendData);
+
+      // Parse the single "name" field into firstName and lastName
+      const fullName = backendData.name || '';
+      const nameParts = fullName.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
       const memberType = this.mapMemberTypeFromString(backendData.memberType);
-      const role = this.mapRoleFromString(backendData.role);
+      const role = this.mapRoleFromString(backendData.role || backendData.memberType);
 
       const member: Member = {
-        memberId: backendData.memberId || 0,
-        firstName: backendData.firstName || '',
-        lastName: backendData.lastName || '',
-        fullName: backendData.fullName || `${backendData.firstName || ''} ${backendData.lastName || ''}`.trim(),
+        memberId: backendData.memberID || 0,  // Note: backend uses "memberID"
+        firstName: firstName,
+        lastName: lastName,
+        fullName: fullName,
         email: backendData.email || '',
         memberType: memberType,
         role: role,
@@ -309,10 +159,8 @@ export class MembersApiService {
 
       console.log('👥 MembersApiService: Mapped member:', member);
       return member;
-      
     } catch (error) {
       console.error('👥 MembersApiService: Member mapping error:', error);
-      console.error('👥 MembersApiService: Input backendData:', backendData);
       throw new Error(`Failed to map member: ${error}`);
     }
   }
@@ -321,7 +169,9 @@ export class MembersApiService {
    * Map member type string to enum
    */
   private mapMemberTypeFromString(memberType: string): MemberType {
-    switch (memberType?.toLowerCase()) {
+    const normalizedType = memberType?.toLowerCase().replace(/\s+/g, '');
+    
+    switch (normalizedType) {
       case 'regularmember':
       case 'regular_member':
       case 'member':
@@ -333,7 +183,7 @@ export class MembersApiService {
       case 'management_staff':
         return MemberType.MANAGEMENT_STAFF;
       default:
-        console.warn('👥 MembersApiService: Unknown member type:', memberType, 'defaulting to RegularMember');
+        console.warn('👥 MembersApiService: Unknown member type:', memberType, 'normalized:', normalizedType);
         return MemberType.REGULAR_MEMBER;
     }
   }
@@ -342,8 +192,11 @@ export class MembersApiService {
    * Map role string to enum
    */
   private mapRoleFromString(role: string): UserRole {
-    switch (role?.toLowerCase()) {
+    const normalizedRole = role?.toLowerCase().replace(/\s+/g, '');
+    
+    switch (normalizedRole) {
       case 'member':
+      case 'regularmember':
         return UserRole.MEMBER;
       case 'minorstaff':
       case 'minor_staff':
@@ -355,7 +208,7 @@ export class MembersApiService {
       case 'admin':
         return UserRole.ADMINISTRATOR;
       default:
-        console.warn('👥 MembersApiService: Unknown role:', role, 'defaulting to Member');
+        console.warn('👥 MembersApiService: Unknown role:', role, 'normalized:', normalizedRole, 'defaulting to Member');
         return UserRole.MEMBER;
     }
   }
@@ -368,32 +221,24 @@ export class MembersApiService {
       const status = error.response.status;
       const errorData = error.response.data;
       
-      console.error(`👥 MembersApiService: ${operation} HTTP Status:`, status);
-      console.error(`👥 MembersApiService: ${operation} Error Response:`, errorData);
-      
       switch (status) {
         case 401:
-          const message = errorData?.detail || errorData?.error?.message || 'Unauthorized access';
-          return Result.failure(new Error(message));
+          return Result.failure(new Error('Unauthorized access'));
         case 400:
-          const validationMessage = errorData?.detail || errorData?.error?.message || 'Invalid request format';
-          return Result.failure(new Error(validationMessage));
+          const message = errorData?.detail || errorData?.error?.message || 'Invalid request';
+          return Result.failure(new Error(message));
         case 409:
-          const conflictMessage = errorData?.detail || errorData?.error?.message || 'Member already exists';
-          return Result.failure(new Error(conflictMessage));
+          return Result.failure(new Error('Email already exists'));
         case 500:
           return Result.failure(new Error('Server error - please try again later'));
-        case 404:
-          return Result.failure(new Error(`${operation} service unavailable`));
         default:
           return Result.failure(new Error(`Network error (${status})`));
       }
-    } else if (error.request) {
-      console.error(`👥 MembersApiService: ${operation} network error - no response from server`);
-      return Result.failure(new Error('Cannot connect to server - please check your connection'));
-    } else {
-      console.error(`👥 MembersApiService: ${operation} unexpected error:`, error.message);
-      return Result.failure(new Error(error.message || 'An unexpected error occurred'));
     }
+    
+    return Result.failure(new Error('Network error - please check your connection'));
   }
 }
+
+// Export the DTO type
+export type { RegisterMemberDto };

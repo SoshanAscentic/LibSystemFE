@@ -2,8 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CreateMemberDto } from '../../../domain/dtos/MemberDto';
-import { MemberType } from '../../../domain/entities/Member';
+import { RegisterMemberDto } from '../../../domain/dtos/MemberDto';
 import { Button } from '../../ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../molecules/Card';
 import { Input } from '../../atoms/Input';
@@ -15,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../ui/select';
-import { User, Mail, Users } from 'lucide-react';
+import { User, Mail, Users, Lock } from 'lucide-react';
 
 // Validation schema
 const memberSchema = z.object({
@@ -28,40 +27,41 @@ const memberSchema = z.object({
   email: z.string()
     .email('Please enter a valid email address')
     .max(255, 'Email must be less than 255 characters'),
-  memberType: z.string()
-    .refine((val) => ['0', '1', '2'].includes(val), 'Please select a valid member type'),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
-    .optional()
+    .max(100, 'Password must be less than 100 characters'),
+  confirmPassword: z.string()
+    .min(8, 'Confirm password must be at least 8 characters'),
+  memberType: z.string()
+    .refine((val) => ['0', '1', '2'].includes(val), 'Please select a valid member type'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 type MemberFormData = z.infer<typeof memberSchema>;
 
 interface MemberFormProps {
-  initialData?: Partial<CreateMemberDto>;
-  onSubmit: (data: CreateMemberDto) => void;
+  onSubmit: (data: RegisterMemberDto) => void;
   onCancel: () => void;
   isLoading?: boolean;
   title?: string;
   submitText?: string;
-  showPassword?: boolean;
   className?: string;
 }
 
 const memberTypeOptions = [
-  { value: '0', label: 'Regular Member', description: 'Can borrow books and view catalog' },
-  { value: '1', label: 'Minor Staff', description: 'Can manage books but cannot borrow' },
-  { value: '2', label: 'Management Staff', description: 'Can manage books and borrow' }
+  { value: '0', label: 'Regular Member', description: 'Standard library member' },
+  { value: '1', label: 'Minor Staff', description: 'Library staff with limited access' },
+  { value: '2', label: 'Management Staff', description: 'Library management with full access' }
 ];
 
 export const MemberForm: React.FC<MemberFormProps> = ({
-  initialData,
   onSubmit,
   onCancel,
   isLoading = false,
-  title = 'Member Information',
-  submitText = 'Save Member',
-  showPassword = true,
+  title = 'Register New Member',
+  submitText = 'Register Member',
   className
 }) => {
   const {
@@ -73,11 +73,12 @@ export const MemberForm: React.FC<MemberFormProps> = ({
   } = useForm<MemberFormData>({
     resolver: zodResolver(memberSchema),
     defaultValues: {
-      firstName: initialData?.firstName || '',
-      lastName: initialData?.lastName || '',
-      email: initialData?.email || '',
-      memberType: initialData?.memberType?.toString() || '0',
-      password: ''
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      memberType: '0'
     },
     mode: 'onChange'
   });
@@ -85,12 +86,13 @@ export const MemberForm: React.FC<MemberFormProps> = ({
   const watchedMemberType = watch('memberType');
 
   const handleFormSubmit = (data: MemberFormData) => {
-    const submitData: CreateMemberDto = {
+    const submitData: RegisterMemberDto = {
       firstName: data.firstName.trim(),
       lastName: data.lastName.trim(),
       email: data.email.trim().toLowerCase(),
-      memberType: parseInt(data.memberType, 10),
-      password: data.password || undefined
+      password: data.password,
+      confirmPassword: data.confirmPassword,
+      memberType: parseInt(data.memberType, 10)
     };
 
     onSubmit(submitData);
@@ -153,6 +155,41 @@ export const MemberForm: React.FC<MemberFormProps> = ({
             </div>
           </div>
 
+          {/* Password Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900">Security</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="password" required>
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  {...register('password')}
+                  error={errors.password?.message}
+                  leftIcon={<Lock className="h-4 w-4" />}
+                  placeholder="Enter password"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="confirmPassword" required>
+                  Confirm Password
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  {...register('confirmPassword')}
+                  error={errors.confirmPassword?.message}
+                  leftIcon={<Lock className="h-4 w-4" />}
+                  placeholder="Confirm password"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Member Type */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-gray-900">Member Type</h3>
@@ -187,28 +224,6 @@ export const MemberForm: React.FC<MemberFormProps> = ({
               )}
             </div>
           </div>
-
-          {/* Password (optional for updates) */}
-          {showPassword && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Security {!initialData && <span className="text-red-500">*</span>}
-              </h3>
-              
-              <div>
-                <Label htmlFor="password" required={!initialData}>
-                  {initialData ? 'New Password (leave blank to keep current)' : 'Password'}
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  {...register('password')}
-                  error={errors.password?.message}
-                  placeholder={initialData ? 'Enter new password (optional)' : 'Enter password'}
-                />
-              </div>
-            </div>
-          )}
 
           {/* Form Actions */}
           <div className="flex gap-3 pt-4">

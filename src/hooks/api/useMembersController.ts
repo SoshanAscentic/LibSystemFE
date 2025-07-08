@@ -1,6 +1,6 @@
-import { useContainer } from '../shared/hooks/useContainer';
-import { SERVICE_KEYS } from '../shared/container/ServiceKeys';
-import { MembersController } from '../application/controllers/MembersController';
+import { useContainer } from '../../shared/hooks/useContainer';
+import { SERVICE_KEYS } from '../../shared/container/ServiceKeys';
+import { MembersController } from '../../application/controllers/MemberController';
 
 export const useMembersController = (): MembersController => {
   const container = useContainer();

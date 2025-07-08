@@ -30,6 +30,11 @@ import { BookDetailsPageContainer } from './presentation/components/BookDetailsP
 import { CreateBookPageContainer } from './presentation/components/CreateBookPageContainer';
 import { EditBookPageContainer } from './presentation/components/EditBookPageContainer';
 
+// Members Page Containers - NEW
+import { MembersPageContainer } from './presentation/components/MembersPageContainer';
+import { MemberDetailsPageContainer } from './presentation/components/MemberDetailsPageContainer';
+import { CreateMemberPageContainer } from './presentation/components/CreateMemberPageContainer';
+
 // Loading Component
 import { LoadingState } from './components/molecules/LoadingState';
 
@@ -206,18 +211,32 @@ function AuthenticatedApp() {
         </ProtectedRoute>
       } />
 
-      {/* Future routes */}
+      {/* Members Routes - NEW - Protected and with role-based access */}
       <Route path="/members" element={
         <ProtectedRoute resource="members" action="read">
           <AppLayout>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold">Members Management</h1>
-              <p className="text-gray-600 mt-2">Coming soon in the next phase...</p>
-            </div>
+            <MembersPageContainer />
           </AppLayout>
         </ProtectedRoute>
       } />
 
+      <Route path="/members/add" element={
+        <ProtectedRoute resource="members" action="create">
+          <AppLayout>
+            <CreateMemberPageContainer />
+          </AppLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/members/:id" element={
+        <ProtectedRoute resource="members" action="read">
+          <AppLayout>
+            <MemberDetailsPageContainer />
+          </AppLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Future routes */}
       <Route path="/borrowing" element={
         <ProtectedRoute resource="borrowing" action="read">
           <AppLayout>

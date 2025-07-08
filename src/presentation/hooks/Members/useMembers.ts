@@ -1,6 +1,6 @@
+//src/presentation/hooks/useMembers.ts
 import { useState, useEffect } from 'react';
 import { Member } from '../../../domain/entities/Member';
-import { MemberFilters, MemberSorting, MemberPagination } from '../../../domain/valueObjects/MemberFilters';
 import { useMembersController } from './useMembersController';
 
 interface UseMembersResult {
@@ -10,11 +10,7 @@ interface UseMembersResult {
   refresh: () => void;
 }
 
-export const useMembers = (
-  filters?: MemberFilters,
-  sorting?: MemberSorting,
-  pagination?: MemberPagination
-): UseMembersResult => {
+export const useMembers = (): UseMembersResult => {
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +21,7 @@ export const useMembers = (
     setIsLoading(true);
     setError(null);
     
-    const result = await controller.handleGetAllMembers(filters, sorting, pagination);
+    const result = await controller.handleGetAllMembers();
     
     setMembers(result.members);
     setIsLoading(false);
@@ -37,7 +33,7 @@ export const useMembers = (
 
   useEffect(() => {
     loadMembers();
-  }, [filters, sorting, pagination]);
+  }, []);
 
   return {
     members,

@@ -1,24 +1,4 @@
 import { Member } from '../domain/entities/Member';
-import { CreateMemberDto } from '../domain/dtos/MemberDto';
-
-export function memberToCreateMemberDto(member: Member): CreateMemberDto {
-  return {
-    firstName: member.firstName,
-    lastName: member.lastName,
-    email: member.email,
-    memberType: getMemberTypeNumber(member.memberType)
-  };
-}
-
-function getMemberTypeNumber(memberType: string): number {
-  const typeMap: Record<string, number> = {
-    'RegularMember': 0,
-    'MinorStaff': 1,
-    'ManagementStaff': 2
-  };
-  
-  return typeMap[memberType] ?? 0;
-}
 
 export function getMemberTypeLabel(memberType: string | number): string {
   if (typeof memberType === 'number') {

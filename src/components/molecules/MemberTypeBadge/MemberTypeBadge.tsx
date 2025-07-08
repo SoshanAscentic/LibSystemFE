@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge } from '../../ui/badge';
-import { User, UserCheck, UserCog } from 'lucide-react';
+import { User, UserCheck, UserCog, Shield } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { MemberType } from '../../../domain/entities/Member';
 
@@ -37,6 +37,12 @@ export const MemberTypeBadge: React.FC<MemberTypeBadgeProps> = ({
           label: 'Management Staff',
           icon: <UserCog className="mr-1 h-3 w-3" />,
           className: 'bg-purple-50 text-purple-700 border-purple-200'
+        };
+      case MemberType.ADMINISTRATOR:
+        return {
+          label: 'Administrator',
+          icon: <Shield className="mr-1 h-3 w-3" />,
+          className: 'bg-red-50 text-red-700 border-red-200'
         };
       default:
         return {
