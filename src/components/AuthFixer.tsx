@@ -6,7 +6,7 @@ export const AuthFixer: React.FC = () => {
     // Auto-fix invalid tokens on mount
     const fixed = AuthDebugTools.checkAndFixInvalidTokens();
     if (fixed) {
-      console.log('🔧 Auto-fixed invalid tokens');
+      console.log('Auto-fixed invalid tokens');
     }
   }, []);
 

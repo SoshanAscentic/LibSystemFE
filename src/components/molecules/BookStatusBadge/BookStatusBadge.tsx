@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge } from '../../ui/badge';
-import { CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CheckCircle, XCircle } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 interface BookStatusBadgeProps {

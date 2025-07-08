@@ -4,9 +4,9 @@ import { Member, MemberType, UserRole } from '../../domain/entities/Member';
 
 // Backend response interface
 interface BackendMemberResponse {
-  memberID: number;        // Note: backend uses "memberID" not "memberId"
-  name: string;           // Note: backend uses "name" not separate firstName/lastName
-  email?: string;         // Email might be optional
+  memberID: number;        
+  name: string;           
+  email?: string;         
   memberType: string;
   role?: string;
   isActive: boolean;
@@ -39,11 +39,11 @@ export class MembersApiService {
    */
   async getAllMembers(): Promise<Result<Member[], Error>> {
     try {
-      console.log('👥 MembersApiService: Getting all members');
+      console.log('MembersApiService: Getting all members');
       
       const response = await this.apiClient.get('/api/members');
       
-      console.log('👥 MembersApiService: Response:', response.data);
+      console.log('MembersApiService: Response:', response.data);
       
       if (response.data.success) {
         const backendMembers: BackendMemberResponse[] = response.data.data as BackendMemberResponse[];
@@ -53,7 +53,7 @@ export class MembersApiService {
         return Result.failure(new Error(response.data.error?.message || 'Failed to fetch members'));
       }
     } catch (error: any) {
-      console.error('👥 MembersApiService: Get all members error:', error);
+      console.error('MembersApiService: Get all members error:', error);
       return this.handleApiError(error, 'get all members');
     }
   }
@@ -63,7 +63,7 @@ export class MembersApiService {
    */
   async getMemberById(id: number): Promise<Result<Member | null, Error>> {
     try {
-      console.log('👥 MembersApiService: Getting member by ID:', id);
+      console.log('MembersApiService: Getting member by ID:', id);
       
       const response = await this.apiClient.get(`/api/members/${id}`);
       
@@ -95,7 +95,7 @@ export class MembersApiService {
    */
   async registerMember(data: RegisterMemberDto): Promise<Result<Member, Error>> {
     try {
-      console.log('👥 MembersApiService: Registering member:', { 
+      console.log('MembersApiService: Registering member:', { 
         ...data, 
         password: '[HIDDEN]',
         confirmPassword: '[HIDDEN]'
@@ -103,7 +103,7 @@ export class MembersApiService {
       
       const response = await this.apiClient.post('/api/auth/register', data);
       
-      console.log('👥 MembersApiService: Register response:', response.data);
+      console.log('MembersApiService: Register response:', response.data);
       
       if (response.data.success) {
         const backendMember: BackendMemberResponse = response.data.data as BackendMemberResponse;
@@ -113,7 +113,7 @@ export class MembersApiService {
         return Result.failure(new Error(response.data.error?.message || 'Failed to register member'));
       }
     } catch (error: any) {
-      console.error('👥 MembersApiService: Register member error:', error);
+      console.error('MembersApiService: Register member error:', error);
       return this.handleApiError(error, 'register member');
     }
   }
@@ -127,7 +127,7 @@ export class MembersApiService {
         throw new Error('Backend member data is null or undefined');
       }
 
-      console.log('👥 MembersApiService: Mapping backend data:', backendData);
+      console.log('MembersApiService: Mapping backend data:', backendData);
 
       // Parse the single "name" field into firstName and lastName
       const fullName = backendData.name || '';
@@ -157,10 +157,10 @@ export class MembersApiService {
         borrowingHistory: backendData.borrowingHistory || [],
       };
 
-      console.log('👥 MembersApiService: Mapped member:', member);
+      console.log('MembersApiService: Mapped member:', member);
       return member;
     } catch (error) {
-      console.error('👥 MembersApiService: Member mapping error:', error);
+      console.error('MembersApiService: Member mapping error:', error);
       throw new Error(`Failed to map member: ${error}`);
     }
   }
@@ -183,7 +183,7 @@ export class MembersApiService {
       case 'management_staff':
         return MemberType.MANAGEMENT_STAFF;
       default:
-        console.warn('👥 MembersApiService: Unknown member type:', memberType, 'normalized:', normalizedType);
+        console.warn('MembersApiService: Unknown member type:', memberType, 'normalized:', normalizedType);
         return MemberType.REGULAR_MEMBER;
     }
   }
@@ -208,7 +208,7 @@ export class MembersApiService {
       case 'admin':
         return UserRole.ADMINISTRATOR;
       default:
-        console.warn('👥 MembersApiService: Unknown role:', role, 'normalized:', normalizedRole, 'defaulting to Member');
+        console.warn('MembersApiService: Unknown role:', role, 'normalized:', normalizedRole, 'defaulting to Member');
         return UserRole.MEMBER;
     }
   }
@@ -242,3 +242,5 @@ export class MembersApiService {
 
 // Export the DTO type
 export type { RegisterMemberDto };
+
+export type { Member };

@@ -72,7 +72,7 @@ export const AuthDebug: React.FC = () => {
   };
 
   const handleDebugToConsole = () => {
-    console.group('🔍 Authentication Debug Info');
+    console.group('Authentication Debug Info');
     console.log('Auth State:', {
       isAuthenticated: auth.isAuthenticated,
       isInitialized: auth.isInitialized,

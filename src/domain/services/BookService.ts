@@ -142,10 +142,10 @@ export class BookService {
   }
 
   async deleteBook(id: number): Promise<Result<void, BusinessError>> {
-  console.log('📚 BookService: Starting delete for book ID:', id);
+  console.log('BookService: Starting delete for book ID:', id);
   
   if (!id || id <= 0) {
-    console.log('📚 BookService: Invalid book ID');
+    console.log('BookService: Invalid book ID');
     return Result.failure(
       new ValidationError('Book ID must be a positive number', 'id', id)
     );
@@ -153,19 +153,19 @@ export class BookService {
 
   try {
     // Check if book exists
-    console.log('📚 BookService: Checking if book exists...');
+    console.log('BookService: Checking if book exists...');
     const existingBookResult = await this.repository.findById(id);
-    console.log('📚 BookService: Book exists check result:', existingBookResult);
+    console.log('BookService: Book exists check result:', existingBookResult);
     
     if (existingBookResult.isFailure) {
-      console.log('📚 BookService: Failed to check if book exists');
+      console.log('BookService: Failed to check if book exists');
       return Result.failure(
         new BusinessError(`Failed to verify book with ID ${id}`, 'VERIFICATION_ERROR', existingBookResult.error)
       );
     }
     
     if (!existingBookResult.value) {
-      console.log('📚 BookService: Book not found');
+      console.log('BookService: Book not found');
       return Result.failure(
         new BusinessError(`Book with ID ${id} not found`, 'NOT_FOUND')
       );
@@ -173,10 +173,10 @@ export class BookService {
 
     // Business rule: Cannot delete borrowed books
     const book = existingBookResult.value;
-    console.log('📚 BookService: Book availability:', book.isAvailable);
+    console.log('BookService: Book availability:', book.isAvailable);
     
     if (!book.isAvailable) {
-      console.log('📚 BookService: Cannot delete borrowed book');
+      console.log('BookService: Cannot delete borrowed book');
       return Result.failure(
         new BusinessError(
           'Cannot delete a book that is currently borrowed',
@@ -185,21 +185,21 @@ export class BookService {
       );
     }
 
-    console.log('📚 BookService: Calling repository delete...');
+    console.log('BookService: Calling repository delete...');
     const result = await this.repository.delete(id);
-    console.log('📚 BookService: Repository delete result:', result);
+    console.log('BookService: Repository delete result:', result);
     
     if (result.isFailure) {
-      console.error('📚 BookService: Repository delete failed:', result.error);
+      console.error('BookService: Repository delete failed:', result.error);
       return Result.failure(
         new BusinessError('Failed to delete book', 'DELETE_ERROR', result.error)
       );
     }
 
-    console.log('📚 BookService: Delete successful');
+    console.log('BookService: Delete successful');
     return Result.success(undefined);
   } catch (error) {
-    console.error('📚 BookService: Unexpected error during delete:', error);
+    console.error('BookService: Unexpected error during delete:', error);
     return Result.failure(
       new BusinessError('Unexpected error while deleting book', 'UNKNOWN_ERROR', error)
     );

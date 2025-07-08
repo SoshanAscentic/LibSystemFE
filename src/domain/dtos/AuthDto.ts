@@ -10,7 +10,7 @@ export interface RegisterDto {
   readonly email: string;
   readonly password: string;
   readonly confirmPassword: string;
-  readonly memberType: number; // API expects number
+  readonly memberType: number;
 }
 
 export interface LoginResponseDto {

@@ -20,7 +20,8 @@ export interface Member {
 export enum MemberType {
   REGULAR_MEMBER = 'RegularMember',
   MINOR_STAFF = 'MinorStaff',
-  MANAGEMENT_STAFF = 'ManagementStaff'
+  MANAGEMENT_STAFF = 'ManagementStaff',
+  ADMINISTRATOR = "ADMINISTRATOR"
 }
 
 export enum UserRole {

@@ -7,7 +7,7 @@ export class AuthDebugTools {
   static clearAllAuthData(): void {
     try {
       TokenService.clearTokens();
-      console.log('✅ All authentication data cleared');
+      console.log('All authentication data cleared');
     } catch (error) {
       console.error('❌ Failed to clear auth data:', error);
     }
@@ -71,7 +71,7 @@ export class AuthDebugTools {
    */
   static debugAuth(): void {
     const status = this.getAuthStatus();
-    console.group('🔍 Authentication Debug Info');
+    console.group('Authentication Debug Info');
     console.log('Has Access Token:', status.hasAccessToken);
     console.log('Has Refresh Token:', status.hasRefreshToken);
     console.log('Token Valid:', status.tokenValid);
@@ -103,5 +103,5 @@ export class AuthDebugTools {
 // Add to window for easy debugging in development
 if (typeof window !== 'undefined' && import.meta.env.DEV) {
   (window as any).authDebug = AuthDebugTools;
-  console.log('🔧 Auth debug tools available at window.authDebug');
+  console.log('Auth debug tools available at window.authDebug');
 }

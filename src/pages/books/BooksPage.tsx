@@ -134,23 +134,23 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
     setIsSubmitting(true);
     
     try {
-      console.log('🗑️ Deleting book:', modal.book.bookId, modal.book.title);
+      console.log('Deleting book:', modal.book.bookId, modal.book.title);
       
       // Attempt the delete
       const result = await controller.handleDeleteBook(modal.book);
       
-      console.log('🗑️ Delete result:', result);
+      console.log('Delete result:', result);
       
       // Always close modal and refresh - the controller handles notifications
       setModal({ type: null });
       
       // Force refresh the books list
-      console.log('🗑️ Refreshing books list...');
+      console.log('Refreshing books list...');
       await refreshBooks();
-      console.log('✅ Books refreshed');
+      console.log('Books refreshed');
       
     } catch (error) {
-      console.error('❌ Unexpected error during delete:', error);
+      console.error('Unexpected error during delete:', error);
       // Only show error notification for unexpected errors
       setModal({ type: null });
       await refreshBooks();

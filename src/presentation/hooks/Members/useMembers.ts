@@ -1,4 +1,3 @@
-//src/presentation/hooks/useMembers.ts
 import { useState, useEffect } from 'react';
 import { Member } from '../../../domain/entities/Member';
 import { useMembersController } from './useMembersController';

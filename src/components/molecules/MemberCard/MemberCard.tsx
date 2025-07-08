@@ -50,11 +50,10 @@ export const MemberCard: React.FC<MemberCardProps> = ({
   const isDetailed = variant === 'detailed';
 
   // Debug logging
-  console.log('🎯 MemberCard: Rendering member:', member);
+  console.log('MemberCard: Rendering member:', member);
 
   // Safely get member display name
   const displayName = member.fullName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown Member';
-  const displayEmail = member.email || 'No email provided';
 
   return (
     <Card className={cn(

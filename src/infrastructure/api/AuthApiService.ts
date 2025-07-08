@@ -66,25 +66,25 @@ export class AuthApiService {
    */
   async login(credentials: LoginRequest): Promise<Result<AuthResponse, Error>> {
     try {
-      console.log('🔐 AuthApiService: Making login request to /api/auth/login');
-      console.log('🔐 AuthApiService: Request payload:', { 
+      console.log('AuthApiService: Making login request to /api/auth/login');
+      console.log('AuthApiService: Request payload:', { 
         email: credentials.email, 
         password: '[HIDDEN]' 
       });
       
       const response = await this.apiClient.post('/api/auth/login', credentials);
       
-      console.log('🔐 AuthApiService: ===== FULL LOGIN RESPONSE =====');
-      console.log('🔐 AuthApiService: Response:', response.data);
+      console.log('AuthApiService: ===== FULL LOGIN RESPONSE =====');
+      console.log('AuthApiService: Response:', response.data);
       
       if (response.data.success) {
         const backendData: BackendAuthResponse = response.data.data as BackendAuthResponse;
-        console.log('🔐 AuthApiService: Backend data:', backendData);
+        console.log('AuthApiService: Backend data:', backendData);
         
         // Map your backend's format to the expected AuthResponse format
         const authResponse: AuthResponse = this.mapBackendResponseToAuthResponse(backendData);
         
-        console.log('🔐 AuthApiService: Mapped auth response:', authResponse);
+        console.log('AuthApiService: Mapped auth response:', authResponse);
         
         // Store tokens using the mapped data
         const tokenData: TokenData = {
@@ -94,7 +94,7 @@ export class AuthApiService {
           tokenType: authResponse.tokenType
         };
         
-        console.log('🔐 AuthApiService: Storing token data:', {
+        console.log('AuthApiService: Storing token data:', {
           accessTokenLength: tokenData.accessToken?.length,
           refreshTokenLength: tokenData.refreshToken?.length,
           tokenType: tokenData.tokenType,
@@ -104,15 +104,15 @@ export class AuthApiService {
         TokenService.storeTokens(tokenData);
         
         // Verify storage worked
-        console.log('🔐 AuthApiService: Token storage verification:', TokenService.getTokenInfo());
+        console.log('AuthApiService: Token storage verification:', TokenService.getTokenInfo());
         
         return Result.success(authResponse);
       } else {
-        console.error('🔐 AuthApiService: Login failed - API returned success: false');
+        console.error('AuthApiService: Login failed - API returned success: false');
         return Result.failure(new Error(response.data.error?.message || 'Login failed'));
       }
     } catch (error: any) {
-      console.error('🔐 AuthApiService: Login error:', error);
+      console.error('AuthApiService: Login error:', error);
       return this.handleApiError(error, 'login');
     }
   }
@@ -122,8 +122,8 @@ export class AuthApiService {
    */
   async register(userData: RegisterRequest): Promise<Result<AuthResponse, Error>> {
     try {
-      console.log('🔐 AuthApiService: Making registration request to /api/auth/register');
-      console.log('🔐 AuthApiService: Request payload:', { 
+      console.log('AuthApiService: Making registration request to /api/auth/register');
+      console.log('AuthApiService: Request payload:', { 
         ...userData, 
         password: '[HIDDEN]',
         confirmPassword: '[HIDDEN]'
@@ -131,17 +131,17 @@ export class AuthApiService {
       
       const response = await this.apiClient.post('/api/auth/register', userData);
       
-      console.log('🔐 AuthApiService: ===== FULL REGISTRATION RESPONSE =====');
-      console.log('🔐 AuthApiService: Response:', response.data);
+      console.log('AuthApiService: ===== FULL REGISTRATION RESPONSE =====');
+      console.log('AuthApiService: Response:', response.data);
       
       if (response.data.success) {
         const backendData: BackendAuthResponse = response.data.data as BackendAuthResponse;
-        console.log('🔐 AuthApiService: Backend registration data:', backendData);
+        console.log('AuthApiService: Backend registration data:', backendData);
         
         // Map your backend's format to the expected AuthResponse format
         const authResponse: AuthResponse = this.mapBackendResponseToAuthResponse(backendData);
         
-        console.log('🔐 AuthApiService: Mapped registration response:', authResponse);
+        console.log('AuthApiService: Mapped registration response:', authResponse);
         
         // Store tokens using the mapped data
         const tokenData: TokenData = {
@@ -151,7 +151,7 @@ export class AuthApiService {
           tokenType: authResponse.tokenType
         };
         
-        console.log('🔐 AuthApiService: Storing registration token data:', {
+        console.log('AuthApiService: Storing registration token data:', {
           accessTokenLength: tokenData.accessToken?.length,
           refreshTokenLength: tokenData.refreshToken?.length,
           tokenType: tokenData.tokenType,
@@ -161,15 +161,15 @@ export class AuthApiService {
         TokenService.storeTokens(tokenData);
         
         // Verify storage worked
-        console.log('🔐 AuthApiService: Registration token storage verification:', TokenService.getTokenInfo());
+        console.log('AuthApiService: Registration token storage verification:', TokenService.getTokenInfo());
         
         return Result.success(authResponse);
       } else {
-        console.error('🔐 AuthApiService: Registration failed - API returned success: false');
+        console.error('AuthApiService: Registration failed - API returned success: false');
         return Result.failure(new Error(response.data.error?.message || 'Registration failed'));
       }
     } catch (error: any) {
-      console.error('🔐 AuthApiService: Registration error:', error);
+      console.error('AuthApiService: Registration error:', error);
       return this.handleApiError(error, 'registration');
     }
   }
@@ -193,9 +193,9 @@ export class AuthApiService {
     // Map to expected AuthResponse format
     const authResponse: AuthResponse = {
       user: userInfo,
-      accessToken: backendData.token,  // Your backend calls it 'token'
-      refreshToken: backendData.token, // Use same token if no separate refresh token
-      tokenType: 'Bearer',             // Default since backend doesn't provide this
+      accessToken: backendData.token,  
+      refreshToken: backendData.token, 
+      tokenType: 'Bearer',            
       expiresIn: this.calculateExpiresIn(backendData.expiresAt)
     };
 
@@ -208,7 +208,7 @@ export class AuthApiService {
   private calculateExpiresIn(expiresAt: string | number): number {
     try {
       if (!expiresAt) {
-        console.warn('🔐 AuthApiService: No expiration provided, defaulting to 1 hour');
+        console.warn('AuthApiService: No expiration provided, defaulting to 1 hour');
         return 3600; // 1 hour in seconds
       }
       
@@ -217,7 +217,7 @@ export class AuthApiService {
       if (typeof expiresAt === 'string') {
         // If it's a date string, parse it
         expirationTimestamp = new Date(expiresAt).getTime();
-        console.log('🔐 AuthApiService: Parsed expiration date:', new Date(expirationTimestamp).toISOString());
+        console.log('AuthApiService: Parsed expiration date:', new Date(expirationTimestamp).toISOString());
       } else {
         // If it's already a timestamp
         expirationTimestamp = expiresAt;
@@ -227,7 +227,7 @@ export class AuthApiService {
       const now = Date.now();
       const secondsUntilExpiry = Math.floor((expirationTimestamp - now) / 1000);
       
-      console.log('🔐 AuthApiService: Expiration calculation:', {
+      console.log('AuthApiService: Expiration calculation:', {
         expiresAt,
         expirationTimestamp,
         now,
@@ -238,11 +238,11 @@ export class AuthApiService {
       if (secondsUntilExpiry > 0) {
         return secondsUntilExpiry;
       } else {
-        console.warn('🔐 AuthApiService: Calculated negative expiration, using default 1 hour');
+        console.warn('AuthApiService: Calculated negative expiration, using default 1 hour');
         return 3600;
       }
     } catch (error) {
-      console.warn('🔐 AuthApiService: Failed to calculate expiration, using default 1 hour:', error);
+      console.warn('AuthApiService: Failed to calculate expiration, using default 1 hour:', error);
       return 3600; // Default to 1 hour
     }
   }
@@ -255,8 +255,8 @@ export class AuthApiService {
       const status = error.response.status;
       const errorData = error.response.data;
       
-      console.error(`🔐 AuthApiService: ${operation} HTTP Status:`, status);
-      console.error(`🔐 AuthApiService: ${operation} Error Response:`, errorData);
+      console.error(`AuthApiService: ${operation} HTTP Status:`, status);
+      console.error(`AuthApiService: ${operation} Error Response:`, errorData);
       
       switch (status) {
         case 401:
@@ -276,10 +276,10 @@ export class AuthApiService {
           return Result.failure(new Error(`Network error (${status})`));
       }
     } else if (error.request) {
-      console.error(`🔐 AuthApiService: ${operation} network error - no response from server`);
+      console.error(`AuthApiService: ${operation} network error - no response from server`);
       return Result.failure(new Error('Cannot connect to server - please check your connection'));
     } else {
-      console.error(`🔐 AuthApiService: ${operation} unexpected error:`, error.message);
+      console.error(`AuthApiService: ${operation} unexpected error:`, error.message);
       return Result.failure(new Error(error.message || 'An unexpected error occurred'));
     }
   }

@@ -106,34 +106,34 @@ export class ApiBookRepository implements IBookRepository {
 
   async delete(id: number): Promise<Result<void, Error>> {
     try {
-      console.log('🌐 ApiBookRepository: Making DELETE request for book ID:', id);
+      console.log('ApiBookRepository: Making DELETE request for book ID:', id);
       
       const response = await this.apiClient.delete<void>(`/api/books/${id}`);
-      console.log('🌐 ApiBookRepository: DELETE response:', response.data);
+      console.log('ApiBookRepository: DELETE response:', response.data);
       
       // Check if the response indicates success
       if (response.data.success) {
-        console.log('🌐 ApiBookRepository: Delete successful');
+        console.log('ApiBookRepository: Delete successful');
         return Result.success(undefined);
       } else {
-        console.error('🌐 ApiBookRepository: API returned success: false');
+        console.error('ApiBookRepository: API returned success: false');
         const errorMessage = response.data.error?.message || 'Delete operation failed';
-        console.error('🌐 ApiBookRepository: Error message:', errorMessage);
+        console.error('ApiBookRepository: Error message:', errorMessage);
         return Result.failure(new Error(errorMessage));
       }
     } catch (error: any) {
-      console.error('🌐 ApiBookRepository: DELETE request failed:', error);
+      console.error('ApiBookRepository: DELETE request failed:', error);
       
       // Handle different HTTP status codes
       if (error.response) {
         const status = error.response.status;
-        console.log('🌐 ApiBookRepository: HTTP status:', status);
-        console.log('🌐 ApiBookRepository: Response data:', error.response.data);
+        console.log('ApiBookRepository: HTTP status:', status);
+        console.log('ApiBookRepository: Response data:', error.response.data);
         
         switch (status) {
           case 404:
             // Book not found - this might actually be success if it's already deleted
-            console.warn('🌐 ApiBookRepository: Book not found (404) - might already be deleted');
+            console.warn('ApiBookRepository: Book not found (404) - might already be deleted');
             return Result.success(undefined); // Treat as success
             
           case 400:
@@ -155,10 +155,10 @@ export class ApiBookRepository implements IBookRepository {
             return Result.failure(new Error(`HTTP ${status}: ${error.response.data?.message || 'Delete failed'}`));
         }
       } else if (error.request) {
-        console.error('🌐 ApiBookRepository: Network error - no response received');
+        console.error('ApiBookRepository: Network error - no response received');
         return Result.failure(new Error('Network error - could not reach server'));
       } else {
-        console.error('🌐 ApiBookRepository: Request setup error:', error.message);
+        console.error('ApiBookRepository: Request setup error:', error.message);
         return Result.failure(new Error(`Request error: ${error.message}`));
       }
     }

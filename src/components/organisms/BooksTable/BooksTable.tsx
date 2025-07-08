@@ -78,8 +78,6 @@ export const BooksTable: React.FC<BooksTableProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* 🔧 REMOVED: Header with Add Book button - now handled by main page */}
-      {/* Simple header with just book count */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900">Books Collection</h2>
         <p className="text-sm text-gray-600">
@@ -235,7 +233,7 @@ export const BooksTable: React.FC<BooksTableProps> = ({
                 No books match your current filters.
               </p>
               
-              {/* 🔧 KEEP: Conditional Add Book action in empty state only */}
+              {/* KEEP: Conditional Add Book action in empty state only */}
               {canAdd && onAddBook && (
                 <div className="mt-4">
                   <Button onClick={onAddBook} variant="outline" className="flex items-center gap-2 mx-auto">

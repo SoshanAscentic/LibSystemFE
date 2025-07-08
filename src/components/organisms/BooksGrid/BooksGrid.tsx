@@ -88,14 +88,6 @@ export const BooksGrid: React.FC<BooksGridProps> = ({
                 <List className="h-4 w-4" />
               </Button>
             </div>
-
-            {/* Add Book Button
-            {canAdd && onAddBook && (
-              <Button onClick={onAddBook}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Book
-              </Button>
-            )} */}
           </div>
         </div>
 

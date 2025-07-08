@@ -1,4 +1,3 @@
-// src/domain/services/AuthenticationService.ts
 import { Result } from '../../shared/types/Result';
 import { BusinessError, ValidationError } from '../../shared/types/errors';
 import { AuthApiService, AuthResponse, UserInfo, LoginRequest, RegisterRequest, ChangePasswordRequest } from '../../infrastructure/api/AuthApiService';
@@ -47,60 +46,60 @@ export class AuthenticationService {
    */
   async login(credentials: LoginCredentials): Promise<Result<AuthenticationResult, BusinessError>> {
     try {
-      console.log('👤 AuthenticationService: Starting login process for:', credentials.email);
+      console.log('AuthenticationService: Starting login process for:', credentials.email);
       
       // Validate input
       const validation = this.validationService.validateLoginCredentials(credentials);
       if (!validation.isValid) {
-        console.log('👤 AuthenticationService: Validation failed:', validation.errors);
+        console.log('AuthenticationService: Validation failed:', validation.errors);
         return Result.failure(
           new ValidationError(validation.errors.join(', '), 'credentials', credentials)
         );
       }
-      console.log('👤 AuthenticationService: Credentials validation passed');
+      console.log('AuthenticationService: Credentials validation passed');
 
       // Prepare API request
       const loginRequest: LoginRequest = {
         email: credentials.email.trim().toLowerCase(),
         password: credentials.password
       };
-      console.log('👤 AuthenticationService: Prepared API request for:', loginRequest.email);
+      console.log('AuthenticationService: Prepared API request for:', loginRequest.email);
 
       // Call API
-      console.log('👤 AuthenticationService: Calling authApiService.login...');
+      console.log('AuthenticationService: Calling authApiService.login...');
       const result = await this.authApiService.login(loginRequest);
-      console.log('👤 AuthenticationService: API call completed, result success:', result.isSuccess);
+      console.log('AuthenticationService: API call completed, result success:', result.isSuccess);
 
       if (result.isFailure) {
-        console.error('👤 AuthenticationService: API call failed:', result.error.message);
+        console.error('AuthenticationService: API call failed:', result.error.message);
         return Result.failure(
           new BusinessError('Login failed', 'LOGIN_ERROR', result.error.message)
         );
       }
 
-      console.log('👤 AuthenticationService: API call successful, processing response...');
+      console.log('AuthenticationService: API call successful, processing response...');
       const authResponse = result.value;
-      console.log('👤 AuthenticationService: Auth response user:', authResponse.user);
+      console.log('AuthenticationService: Auth response user:', authResponse.user);
       
       try {
         let authUser: AuthUser;
         
         // Now we should have proper user info from the mapped response
         if (authResponse.user) {
-          console.log('👤 AuthenticationService: User info found in response, mapping...');
+          console.log('AuthenticationService: User info found in response, mapping...');
           authUser = this.mapUserInfoToAuthUser(authResponse.user);
-          console.log('👤 AuthenticationService: User mapping successful:', authUser.email);
+          console.log('AuthenticationService: User mapping successful:', authUser.email);
         } else {
-          console.log('👤 AuthenticationService: No user info in response, trying to extract from token...');
+          console.log('AuthenticationService: No user info in response, trying to extract from token...');
           
           // Fallback: try to get user info from the stored token
           const tokenUser = this.getCurrentUserFromToken();
           
           if (tokenUser) {
-            console.log('👤 AuthenticationService: Successfully extracted user from token:', tokenUser.email);
+            console.log('AuthenticationService: Successfully extracted user from token:', tokenUser.email);
             authUser = tokenUser;
           } else {
-            console.log('👤 AuthenticationService: Could not extract user from token, creating minimal user object...');
+            console.log('AuthenticationService: Could not extract user from token, creating minimal user object...');
             
             // Final fallback: create minimal user object
             authUser = {
@@ -114,7 +113,7 @@ export class AuthenticationService {
               createdAt: new Date().toISOString()
             };
             
-            console.warn('👤 AuthenticationService: Using minimal user object - user info incomplete');
+            console.warn('AuthenticationService: Using minimal user object - user info incomplete');
           }
         }
         
@@ -123,8 +122,8 @@ export class AuthenticationService {
           isAuthenticated: true
         };
         
-        console.log('👤 AuthenticationService: Login process completed successfully');
-        console.log('👤 AuthenticationService: Final user object:', {
+        console.log('AuthenticationService: Login process completed successfully');
+        console.log('AuthenticationService: Final user object:', {
           userId: authUser.userId,
           email: authUser.email,
           fullName: authUser.fullName,
@@ -134,7 +133,7 @@ export class AuthenticationService {
         return Result.success(authResult);
         
       } catch (mappingError) {
-        console.error('👤 AuthenticationService: User processing failed:', mappingError);
+        console.error('AuthenticationService: User processing failed:', mappingError);
         
         // Even if user mapping fails, if we have valid tokens, we can still proceed
         // with a minimal user object
@@ -149,7 +148,7 @@ export class AuthenticationService {
           createdAt: new Date().toISOString()
         };
         
-        console.warn('👤 AuthenticationService: Using fallback minimal user due to mapping error');
+        console.warn('AuthenticationService: Using fallback minimal user due to mapping error');
         
         return Result.success({
           user: minimalUser,
@@ -158,8 +157,8 @@ export class AuthenticationService {
       }
 
     } catch (error: any) {
-      console.error('👤 AuthenticationService: Unexpected error during login:', error);
-      console.error('👤 AuthenticationService: Error stack:', error.stack);
+      console.error('AuthenticationService: Unexpected error during login:', error);
+      console.error('AuthenticationService: Error stack:', error.stack);
       return Result.failure(
         new BusinessError('Unexpected error during login', 'UNKNOWN_ERROR', error.message || error)
       );
@@ -171,17 +170,17 @@ export class AuthenticationService {
    */
   async register(userData: RegisterData): Promise<Result<AuthenticationResult, BusinessError>> {
     try {
-      console.log('👤 AuthenticationService: Starting registration process for:', userData.email);
+      console.log('AuthenticationService: Starting registration process for:', userData.email);
       
       // Validate input
       const validation = this.validationService.validateRegistrationData(userData);
       if (!validation.isValid) {
-        console.log('👤 AuthenticationService: Registration validation failed:', validation.errors);
+        console.log('AuthenticationService: Registration validation failed:', validation.errors);
         return Result.failure(
           new ValidationError(validation.errors.join(', '), 'userData', userData)
         );
       }
-      console.log('👤 AuthenticationService: Registration validation passed');
+      console.log('AuthenticationService: Registration validation passed');
 
       // Prepare API request
       const registerRequest: RegisterRequest = {
@@ -192,43 +191,43 @@ export class AuthenticationService {
         confirmPassword: userData.confirmPassword,
         role: userData.role
       };
-      console.log('👤 AuthenticationService: Prepared registration request for:', registerRequest.email);
+      console.log('AuthenticationService: Prepared registration request for:', registerRequest.email);
 
       // Call API
-      console.log('👤 AuthenticationService: Calling authApiService.register...');
+      console.log('AuthenticationService: Calling authApiService.register...');
       const result = await this.authApiService.register(registerRequest);
-      console.log('👤 AuthenticationService: Registration API call completed, result success:', result.isSuccess);
+      console.log('AuthenticationService: Registration API call completed, result success:', result.isSuccess);
 
       if (result.isFailure) {
-        console.error('👤 AuthenticationService: Registration API call failed:', result.error.message);
+        console.error('AuthenticationService: Registration API call failed:', result.error.message);
         return Result.failure(
           new BusinessError('Registration failed', 'REGISTRATION_ERROR', result.error.message)
         );
       }
 
-      console.log('👤 AuthenticationService: Registration API call successful, processing response...');
+      console.log('AuthenticationService: Registration API call successful, processing response...');
       const authResponse = result.value;
-      console.log('👤 AuthenticationService: Registration response user:', authResponse.user);
+      console.log('AuthenticationService: Registration response user:', authResponse.user);
 
       try {
         let authUser: AuthUser;
         
         // Process user info from registration response
         if (authResponse.user) {
-          console.log('👤 AuthenticationService: User info found in registration response, mapping...');
+          console.log('AuthenticationService: User info found in registration response, mapping...');
           authUser = this.mapUserInfoToAuthUser(authResponse.user);
-          console.log('👤 AuthenticationService: Registration user mapping successful:', authUser.email);
+          console.log('AuthenticationService: Registration user mapping successful:', authUser.email);
         } else {
-          console.log('👤 AuthenticationService: No user info in registration response, trying to extract from token...');
+          console.log('AuthenticationService: No user info in registration response, trying to extract from token...');
           
           // Fallback: try to get user info from the stored token
           const tokenUser = this.getCurrentUserFromToken();
           
           if (tokenUser) {
-            console.log('👤 AuthenticationService: Successfully extracted registration user from token:', tokenUser.email);
+            console.log('AuthenticationService: Successfully extracted registration user from token:', tokenUser.email);
             authUser = tokenUser;
           } else {
-            console.log('👤 AuthenticationService: Could not extract registration user from token, creating user object from registration data...');
+            console.log('AuthenticationService: Could not extract registration user from token, creating user object from registration data...');
             
             // Use registration data to create user object
             authUser = {
@@ -242,7 +241,7 @@ export class AuthenticationService {
               createdAt: new Date().toISOString()
             };
             
-            console.log('👤 AuthenticationService: Created user object from registration data');
+            console.log('AuthenticationService: Created user object from registration data');
           }
         }
         
@@ -251,8 +250,8 @@ export class AuthenticationService {
           isAuthenticated: true
         };
         
-        console.log('👤 AuthenticationService: Registration process completed successfully');
-        console.log('👤 AuthenticationService: Final registration user object:', {
+        console.log('AuthenticationService: Registration process completed successfully');
+        console.log('AuthenticationService: Final registration user object:', {
           userId: authUser.userId,
           email: authUser.email,
           fullName: authUser.fullName,
@@ -262,7 +261,7 @@ export class AuthenticationService {
         return Result.success(authResult);
         
       } catch (mappingError) {
-        console.error('👤 AuthenticationService: Registration user processing failed:', mappingError);
+        console.error('AuthenticationService: Registration user processing failed:', mappingError);
         
         // Fallback with registration data
         const fallbackUser: AuthUser = {
@@ -276,7 +275,7 @@ export class AuthenticationService {
           createdAt: new Date().toISOString()
         };
         
-        console.warn('👤 AuthenticationService: Using fallback user from registration data due to mapping error');
+        console.warn('AuthenticationService: Using fallback user from registration data due to mapping error');
         
         return Result.success({
           user: fallbackUser,
@@ -285,8 +284,8 @@ export class AuthenticationService {
       }
 
     } catch (error: any) {
-      console.error('👤 AuthenticationService: Unexpected error during registration:', error);
-      console.error('👤 AuthenticationService: Registration error stack:', error.stack);
+      console.error('AuthenticationService: Unexpected error during registration:', error);
+      console.error('AuthenticationService: Registration error stack:', error.stack);
       return Result.failure(
         new BusinessError('Unexpected error during registration', 'UNKNOWN_ERROR', error.message || error)
       );
@@ -298,12 +297,12 @@ export class AuthenticationService {
    */
   async logout(): Promise<Result<void, BusinessError>> {
     try {
-      console.log('👤 AuthenticationService: Starting logout process');
+      console.log('AuthenticationService: Starting logout process');
       await this.authApiService.logout();
-      console.log('👤 AuthenticationService: Logout completed successfully');
+      console.log('AuthenticationService: Logout completed successfully');
       return Result.success(undefined);
     } catch (error) {
-      console.warn('👤 AuthenticationService: Logout API call failed, but clearing local tokens anyway');
+      console.warn('AuthenticationService: Logout API call failed, but clearing local tokens anyway');
       // Even if API call fails, we consider logout successful locally
       return Result.success(undefined);
     }
@@ -314,18 +313,18 @@ export class AuthenticationService {
    */
   async refreshAuthentication(): Promise<Result<AuthenticationResult, BusinessError>> {
     try {
-      console.log('👤 AuthenticationService: Starting token refresh');
+      console.log('AuthenticationService: Starting token refresh');
       const result = await this.authApiService.refreshToken();
 
       if (result.isFailure) {
-        console.error('👤 AuthenticationService: Token refresh failed:', result.error.message);
+        console.error('AuthenticationService: Token refresh failed:', result.error.message);
         return Result.failure(
           new BusinessError('Token refresh failed', 'REFRESH_ERROR', result.error.message)
         );
       }
 
       const authResponse = result.value;
-      console.log('👤 AuthenticationService: Token refresh successful');
+      console.log('AuthenticationService: Token refresh successful');
       
       let authUser: AuthUser;
       
@@ -351,7 +350,7 @@ export class AuthenticationService {
       });
 
     } catch (error) {
-      console.error('👤 AuthenticationService: Unexpected error during token refresh:', error);
+      console.error('AuthenticationService: Unexpected error during token refresh:', error);
       return Result.failure(
         new BusinessError('Unexpected error during token refresh', 'UNKNOWN_ERROR', error)
       );
@@ -364,20 +363,20 @@ export class AuthenticationService {
   async getCurrentUser(): Promise<Result<AuthUser | null, BusinessError>> {
     try {
       if (!this.isAuthenticated()) {
-        console.log('👤 AuthenticationService: User not authenticated');
+        console.log('AuthenticationService: User not authenticated');
         return Result.success(null);
       }
 
-      console.log('👤 AuthenticationService: Getting current user from API');
+      console.log('AuthenticationService: Getting current user from API');
       const result = await this.authApiService.getCurrentUser();
 
       if (result.isFailure) {
-        console.warn('👤 AuthenticationService: Failed to get user from API, trying token fallback');
+        console.warn('AuthenticationService: Failed to get user from API, trying token fallback');
         
         // Fallback to token-based user info
         const tokenUser = this.getCurrentUserFromToken();
         if (tokenUser) {
-          console.log('👤 AuthenticationService: Successfully got user from token fallback');
+          console.log('AuthenticationService: Successfully got user from token fallback');
           return Result.success(tokenUser);
         }
         
@@ -387,11 +386,11 @@ export class AuthenticationService {
       }
 
       const authUser = this.mapUserInfoToAuthUser(result.value);
-      console.log('👤 AuthenticationService: Successfully got current user from API');
+      console.log('AuthenticationService: Successfully got current user from API');
       return Result.success(authUser);
 
     } catch (error) {
-      console.error('👤 AuthenticationService: Unexpected error while getting current user:', error);
+      console.error('AuthenticationService: Unexpected error while getting current user:', error);
       return Result.failure(
         new BusinessError('Unexpected error while getting current user', 'UNKNOWN_ERROR', error)
       );
@@ -471,15 +470,15 @@ export class AuthenticationService {
   getCurrentUserFromToken(): AuthUser | null {
     const decodedToken = TokenService.getCurrentUser();
     if (!decodedToken) {
-      console.log('👤 AuthenticationService: No decoded token available');
+      console.log('AuthenticationService: No decoded token available');
       return null;
     }
 
     try {
-      console.log('👤 AuthenticationService: Mapping token to AuthUser...');
-      console.log('👤 AuthenticationService: Token name field:', decodedToken.name);
-      console.log('👤 AuthenticationService: Token given_name:', decodedToken.given_name);
-      console.log('👤 AuthenticationService: Token family_name:', decodedToken.family_name);
+      console.log('AuthenticationService: Mapping token to AuthUser...');
+      console.log('AuthenticationService: Token name field:', decodedToken.name);
+      console.log('AuthenticationService: Token given_name:', decodedToken.given_name);
+      console.log('AuthenticationService: Token family_name:', decodedToken.family_name);
       
       // Extract individual name parts for proper mapping
       const firstName = decodedToken.given_name || 
@@ -506,7 +505,7 @@ export class AuthenticationService {
         createdAt: new Date(decodedToken.iat * 1000).toISOString()
       };
 
-      console.log('👤 AuthenticationService: Final AuthUser mapping:', {
+      console.log('AuthenticationService: Final AuthUser mapping:', {
         email: authUser.email,
         firstName: authUser.firstName,
         lastName: authUser.lastName,
@@ -516,7 +515,7 @@ export class AuthenticationService {
       
       return authUser;
     } catch (error) {
-      console.error('👤 AuthenticationService: Error mapping token to user:', error);
+      console.error('AuthenticationService: Error mapping token to user:', error);
       return null;
     }
   }
@@ -532,7 +531,7 @@ export class AuthenticationService {
    * Clear authentication state
    */
   clearAuthentication(): void {
-    console.log('👤 AuthenticationService: Clearing authentication state');
+    console.log('AuthenticationService: Clearing authentication state');
     TokenService.clearTokens();
   }
 
@@ -541,7 +540,7 @@ export class AuthenticationService {
    */
   private mapUserInfoToAuthUser(userInfo: UserInfo): AuthUser {
     try {
-      console.log('👤 AuthenticationService: Mapping user info:', userInfo);
+      console.log('AuthenticationService: Mapping user info:', userInfo);
       
       if (!userInfo) {
         throw new Error('UserInfo is null or undefined');
@@ -554,20 +553,20 @@ export class AuthenticationService {
       // Priority 1: Use role from token (most reliable)
       if (tokenUser && tokenUser.role) {
         userRole = tokenUser.role;
-        console.log('👤 AuthenticationService: Using role from token:', userRole);
+        console.log('AuthenticationService: Using role from token:', userRole);
       }
       
       // Priority 2: If server provides role, use it (but validate it's not empty/Member when token says otherwise)
       if (userInfo.role && userInfo.role !== 'Member') {
         userRole = userInfo.role;
-        console.log('👤 AuthenticationService: Using role from server:', userRole);
+        console.log('AuthenticationService: Using role from server:', userRole);
       } else if (userInfo.role === 'Member' && tokenUser?.role && tokenUser.role !== 'Member') {
         // Server says Member but token says something else - trust the token
         userRole = tokenUser.role;
-        console.log('👤 AuthenticationService: Server says Member but token says', tokenUser.role, '- trusting token');
+        console.log('AuthenticationService: Server says Member but token says', tokenUser.role, '- trusting token');
       }
 
-      console.log('👤 AuthenticationService: Final determined role:', userRole);
+      console.log('AuthenticationService: Final determined role:', userRole);
 
       // Handle the mapped user info from your backend
       const authUser: AuthUser = {
@@ -585,13 +584,13 @@ export class AuthenticationService {
         createdAt: userInfo.createdAt || new Date().toISOString()
       };
 
-      console.log('👤 AuthenticationService: Mapped auth user with preserved role:', authUser);
-      console.log('👤 AuthenticationService: FINAL ROLE CHECK:', authUser.role);
+      console.log('AuthenticationService: Mapped auth user with preserved role:', authUser);
+      console.log('AuthenticationService: FINAL ROLE CHECK:', authUser.role);
       return authUser;
       
     } catch (error) {
-      console.error('👤 AuthenticationService: User mapping error:', error);
-      console.error('👤 AuthenticationService: Input userInfo:', userInfo);
+      console.error('AuthenticationService: User mapping error:', error);
+      console.error('AuthenticationService: Input userInfo:', userInfo);
       throw new Error(`Failed to map user info: ${error}`);
     }
   }

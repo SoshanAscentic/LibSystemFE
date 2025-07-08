@@ -4,5 +4,5 @@ export interface RegisterMemberDto {
   readonly email: string;
   readonly password: string;
   readonly confirmPassword: string;
-  readonly memberType: number; // API expects number: 0=RegularMember, 1=MinorStaff, 2=ManagementStaff
+  readonly memberType: number; // 0=RegularMember, 1=MinorStaff, 2=ManagementStaff
 }

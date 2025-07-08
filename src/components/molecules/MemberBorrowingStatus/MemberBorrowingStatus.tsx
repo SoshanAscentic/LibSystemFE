@@ -18,7 +18,7 @@ export const MemberBorrowingStatus: React.FC<MemberBorrowingStatusProps> = ({
   const overdueBooks = currentLoans.filter(loan => loan.isOverdue);
   
   // Debug logging to help identify the issue
-  console.log('🔍 MemberBorrowingStatus Debug:', {
+  console.log('MemberBorrowingStatus Debug:', {
     memberId: member.memberId,
     memberName: member.fullName,
     borrowedBooksCount: member.borrowedBooksCount,
@@ -128,7 +128,7 @@ export const MemberBorrowingStatus: React.FC<MemberBorrowingStatusProps> = ({
             {member.borrowedBooksCount !== currentLoans.length && (
               <div className="text-xs text-amber-600 mt-2 p-2 bg-amber-50 rounded border border-amber-200">
                 <p>
-                  ⚠️ Count mismatch: Expected {member.borrowedBooksCount} book{member.borrowedBooksCount !== 1 ? 's' : ''}, 
+                  Count mismatch: Expected {member.borrowedBooksCount} book{member.borrowedBooksCount !== 1 ? 's' : ''}, 
                   showing {currentLoans.length} detailed record{currentLoans.length !== 1 ? 's' : ''}
                 </p>
               </div>

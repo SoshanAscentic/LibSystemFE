@@ -1,5 +1,3 @@
-import { Member } from '../domain/entities/Member';
-
 export function getMemberTypeLabel(memberType: string | number): string {
   if (typeof memberType === 'number') {
     const labels = {

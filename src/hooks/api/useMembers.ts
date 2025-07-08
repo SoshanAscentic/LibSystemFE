@@ -1,7 +1,13 @@
-//src/hooks/useMembers.ts
 import { useState, useEffect } from 'react';
-import { Member, MemberFilters } from '../../infrastructure/api/MembersApiService';
+import { Member } from '../../infrastructure/api/MembersApiService';
 import { useMembersController } from './useMembersController';
+
+interface MemberFilters {
+  name?: string;
+  email?: string;
+  status?: string;
+  // Add other filter properties as needed
+}
 
 interface UseMembersResult {
   members: Member[];
@@ -18,13 +24,13 @@ export const useMembers = (filters?: MemberFilters): UseMembersResult => {
   const controller = useMembersController();
 
   const loadMembers = async () => {
-    console.log('👥 useMembers: Loading members with filters:', filters);
+    console.log('useMembers: Loading members with filters:', filters);
     setIsLoading(true);
     setError(null);
     
     try {
-      const result = await controller.handleGetAllMembers(filters);
-      console.log('👥 useMembers: Load result:', result);
+      const result = await controller.handleGetAllMembers();
+      console.log('useMembers: Load result:', result);
       
       setMembers(result.members);
       setIsLoading(false);
@@ -33,14 +39,14 @@ export const useMembers = (filters?: MemberFilters): UseMembersResult => {
         setError(result.error || 'Failed to load members');
       }
     } catch (err: any) {
-      console.error('👥 useMembers: Unexpected error:', err);
+      console.error('useMembers: Unexpected error:', err);
       setError(err.message || 'Failed to load members');
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log('👥 useMembers: Effect triggered, loading members...');
+    console.log('useMembers: Effect triggered, loading members...');
     loadMembers();
   }, [filters]);
 

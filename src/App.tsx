@@ -267,13 +267,13 @@ function AppWithContainer() {
   React.useEffect(() => {
     const configureDeps = async () => {
       try {
-        console.log('🔧 Configuring dependencies...');
+        console.log('Configuring dependencies...');
         configureDependencies(container, (path: string | number) => navigate(String(path)));
         
-        console.log('✅ Dependencies configured successfully');
+        console.log('Dependencies configured successfully');
         setIsConfigured(true);
       } catch (error: any) {
-        console.error('❌ Failed to configure dependencies:', error);
+        console.error('Failed to configure dependencies:', error);
         setConfigError(error.message);
       }
     };
@@ -288,12 +288,12 @@ function AppWithContainer() {
     }
 
     try {
-      console.log('🔍 Resolving AuthenticationService...');
+      console.log('Resolving AuthenticationService...');
       const service = container.resolve(SERVICE_KEYS.AUTHENTICATION_SERVICE);
-      console.log('✅ AuthenticationService resolved successfully');
+      console.log('AuthenticationService resolved successfully');
       return service;
     } catch (error: any) {
-      console.error('❌ Failed to resolve AuthenticationService:', error);
+      console.error('Failed to resolve AuthenticationService:', error);
       console.error('Available services in container:', Object.keys(container));
       setConfigError(`Failed to resolve AuthenticationService: ${error.message}`);
       return null;

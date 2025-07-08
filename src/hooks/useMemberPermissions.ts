@@ -14,13 +14,13 @@ interface MemberPermissions {
 export const useMemberPermissions = (): MemberPermissions & { user: any } => {
   const { user, isAuthenticated } = useAuth();
   
-  console.log('🔐 useMemberPermissions: Current user:', user?.email);
-  console.log('🔐 useMemberPermissions: User role:', user?.role);
-  console.log('🔐 useMemberPermissions: Is authenticated:', isAuthenticated);
+  console.log('useMemberPermissions: Current user:', user?.email);
+  console.log('useMemberPermissions: User role:', user?.role);
+  console.log('useMemberPermissions: Is authenticated:', isAuthenticated);
 
   // If not authenticated or no user, return no permissions
   if (!isAuthenticated || !user) {
-    console.log('🔐 useMemberPermissions: No auth or user, returning no permissions');
+    console.log('useMemberPermissions: No auth or user, returning no permissions');
     return {
       canView: false,
       canAdd: false,
@@ -31,7 +31,7 @@ export const useMemberPermissions = (): MemberPermissions & { user: any } => {
   }
 
   const userRole = user.role || 'Member';
-  console.log('🔐 useMemberPermissions: Determining permissions for role:', userRole);
+  console.log('useMemberPermissions: Determining permissions for role:', userRole);
 
   // Define permissions based on role
   const permissions: MemberPermissions = {
@@ -48,7 +48,7 @@ export const useMemberPermissions = (): MemberPermissions & { user: any } => {
     canManageUsers: ['Administrator'].includes(userRole)
   };
 
-  console.log('🔐 useMemberPermissions: Final permissions for', userRole + ':', permissions);
+  console.log('useMemberPermissions: Final permissions for', userRole + ':', permissions);
 
   return {
     ...permissions,

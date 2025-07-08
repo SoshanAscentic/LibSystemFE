@@ -228,11 +228,11 @@ export class TokenService {
 
       // Enhanced name extraction
       const extractName = (payload: any): string => {
-        console.log('🔍 TokenService: Extracting name from payload...');
+        console.log('TokenService: Extracting name from payload...');
         
         // 1. Try fullName if it exists and is not just email
         if (payload.fullName && payload.fullName !== payload.email) {
-          console.log('🔍 TokenService: Using fullName:', payload.fullName);
+          console.log('TokenService: Using fullName:', payload.fullName);
           return payload.fullName;
         }
         
@@ -242,31 +242,31 @@ export class TokenService {
         
         if (givenName && surname) {
           const fullName = `${givenName} ${surname}`.trim();
-          console.log('🔍 TokenService: Built name from JWT claims:', fullName);
+          console.log('TokenService: Built name from JWT claims:', fullName);
           return fullName;
         }
         
         // 3. Try individual name fields
         if (givenName) {
-          console.log('🔍 TokenService: Using given name only:', givenName);
+          console.log('TokenService: Using given name only:', givenName);
           return givenName;
         }
         
         // 4. Try standard name claim (but not if it's just the email)
         const standardName = payload.name || payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'];
         if (standardName && standardName !== payload.email) {
-          console.log('🔍 TokenService: Using standard name claim:', standardName);
+          console.log('TokenService: Using standard name claim:', standardName);
           return standardName;
         }
         
         // 5. Fallback to email username
         if (payload.email) {
           const emailName = payload.email.split('@')[0];
-          console.log('🔍 TokenService: Using email username as fallback:', emailName);
+          console.log('TokenService: Using email username as fallback:', emailName);
           return emailName;
         }
         
-        console.log('🔍 TokenService: No name found, using fallback');
+        console.log('TokenService: No name found, using fallback');
         return 'Unknown User';
       };
 
