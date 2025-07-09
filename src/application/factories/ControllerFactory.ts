@@ -21,7 +21,7 @@ export class ControllerFactory {
     return this.container.resolve<AuthController>(SERVICE_KEYS.AUTH_CONTROLLER);
   }
 
-  createBorrowingController(): BorrowingController{
-    return this.container.resolve<BorrowingController>(SERVICE_KEYS.BORROWING_CONTROLLER);
-  }
+  // createBorrowingController(): BorrowingController{
+  //   return this.container.resolve<BorrowingController>(SERVICE_KEYS.BORROWING_CONTROLLER);
+  // }
 }
