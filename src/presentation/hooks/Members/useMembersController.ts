@@ -1,14 +1,13 @@
-import { useContainer } from '../../../shared/hooks/useContainer';
-import { SERVICE_KEYS } from '../../../shared/container/ServiceKeys';
+import { useControllerFactory } from '../../../hooks/useControllerFactory';
 import { MembersController } from '../../../application/controllers/MemberController';
 
 export const useMembersController = (): MembersController => {
-  const container = useContainer();
+  const factory = useControllerFactory();
   
   try {
-    return container.resolve<MembersController>(SERVICE_KEYS.MEMBERS_CONTROLLER);
+    return factory.createMembersController();
   } catch (error) {
-    console.error('Failed to resolve MembersController:', error);
-    throw new Error(`Failed to resolve MembersController: ${error}`);
+    console.error('Failed to create MembersController:', error);
+    throw new Error(`Failed to create MembersController: ${error}`);
   }
 };

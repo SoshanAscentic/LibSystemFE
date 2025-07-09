@@ -1,14 +1,13 @@
-import { useContainer } from '../../../shared/hooks/useContainer';
-import { SERVICE_KEYS } from '../../../shared/container/ServiceKeys';
+import { useControllerFactory } from '../../../hooks/useControllerFactory';
 import { BooksController } from '../../../application/controllers/BooksController';
 
 export const useBooksController = (): BooksController => {
-  const container = useContainer();
+  const factory = useControllerFactory();
   
   try {
-    return container.resolve<BooksController>(SERVICE_KEYS.BOOKS_CONTROLLER);
+    return factory.createBooksController();
   } catch (error) {
-    console.error('Failed to resolve BooksController:', error);
-    throw new Error(`Failed to resolve BooksController: ${error}`);
+    console.error('Failed to create BooksController:', error);
+    throw new Error(`Failed to create BooksController: ${error}`);
   }
 };

@@ -1,6 +1,7 @@
 import { Container } from '../../shared/container/Container';
 import { SERVICE_KEYS } from '../../shared/container/ServiceKeys';
 import { BooksController } from '../controllers/BooksController';
+import { MembersController } from '../controllers/MemberController';
 import { AuthController } from '../controllers/AuthController';
 
 export class ControllerFactory {
@@ -8,6 +9,10 @@ export class ControllerFactory {
 
   createBooksController(): BooksController {
     return this.container.resolve<BooksController>(SERVICE_KEYS.BOOKS_CONTROLLER);
+  }
+
+  createMembersController(): MembersController {
+    return this.container.resolve<MembersController>(SERVICE_KEYS.MEMBERS_CONTROLLER);
   }
 
   createAuthController(): AuthController {
