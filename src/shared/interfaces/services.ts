@@ -7,6 +7,13 @@ export interface INavigationService {
   navigateToDashboard(): void;
   navigateToLogin(): void;
   navigateToRegister(): void;
+  
+  // Borrowing navigation methods
+  navigateToBorrowings(): void;
+  navigateToBorrowBook(): void;
+  navigateToReturnBook(): void;
+  navigateToBorrowingHistory(): void;
+  
   goBack(): void;
 }
 
