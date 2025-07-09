@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Member } from '../../infrastructure/api/MembersApiService';
-import { useMembersController } from './useMembersController';
+import { useMembersController } from '../../presentation/hooks/Members/useMembersController';
 
 interface MemberFilters {
   name?: string;

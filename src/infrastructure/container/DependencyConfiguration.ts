@@ -4,9 +4,9 @@ import { SERVICE_KEYS } from '../../shared/container/ServiceKeys';
 // Infrastructure
 import { ApiClient } from '../api/ApiClient';
 import { AuthApiService } from '../api/AuthApiService';
-import { MembersApiService } from '../api/MembersApiService'; 
+import { MembersApiService } from '../api/MembersApiService';
 import { ApiBookRepository } from '../repositories/ApiBookRepository';
-import { ApiMemberRepository } from '../repositories/ApiMemberRepository'; 
+import { ApiMemberRepository } from '../repositories/ApiMemberRepository';
 import { NavigationServiceImpl } from '../services/NavigationServiceImpl';
 import { NotificationService } from '../services/NotificationService';
 
@@ -15,12 +15,22 @@ import { AuthenticationService } from '../../domain/services/AuthenticationServi
 import { AuthValidationService } from '../../domain/services/AuthValidationService';
 import { BookService } from '../../domain/services/BookService';
 import { BookValidationService } from '../../domain/services/BookValidationService';
-import { MemberService } from '../../domain/services/MemberService'; 
-import { MemberValidationService } from '../../domain/services/MemberValidationService'; 
+import { MemberService } from '../../domain/services/MemberService';
+import { MemberValidationService } from '../../domain/services/MemberValidationService';
+
+// Application Use Cases
+import { CreateBookUseCase } from '../../application/useCases/CreaeteBookUseCase';
+import { DeleteBookUseCase } from '../../application/useCases/DeleteBookUseCase';
+import { GetBooksUseCase } from '../../application/useCases/GetBookUseCase';
+
+// Member Use Cases
+import { GetMembersUseCase } from '../../application/useCases/GetMembersUseCase';
+import { GetMemberByIdUseCase } from '../../application/useCases/GetMemberByIdUseCase';
+import { RegisterMemberUseCase } from '../../application/useCases/RegisterMemberUseCase';
 
 // Application Controllers
 import { BooksController } from '../../application/controllers/BooksController';
-import { MembersController } from '../../application/controllers/MemberController'; 
+import { MembersController } from '../../application/controllers/MemberController';
 import { AuthController } from '../../application/controllers/AuthController';
 
 export const configureDependencies = (container: Container, navigate: (path: string | number) => void): void => {
@@ -106,6 +116,41 @@ export const configureDependencies = (container: Container, navigate: (path: str
       return new MemberService(memberRepository, memberValidationService);
     });
 
+    // Application Use Cases
+    console.log('🎯 Registering use cases...');
+    
+    // Book Use Cases
+    container.register(SERVICE_KEYS.CREATE_BOOK_USE_CASE, () => {
+      console.log('Creating CreateBookUseCase');
+      return new CreateBookUseCase(container.resolve(SERVICE_KEYS.BOOK_SERVICE));
+    });
+
+    container.register(SERVICE_KEYS.DELETE_BOOK_USE_CASE, () => {
+      console.log('Creating DeleteBookUseCase');
+      return new DeleteBookUseCase(container.resolve(SERVICE_KEYS.BOOK_SERVICE));
+    });
+
+    container.register(SERVICE_KEYS.GET_BOOKS_USE_CASE, () => {
+      console.log('Creating GetBooksUseCase');
+      return new GetBooksUseCase(container.resolve(SERVICE_KEYS.BOOK_SERVICE));
+    });
+
+    // Member Use Cases
+    container.register(SERVICE_KEYS.GET_MEMBERS_USE_CASE, () => {
+      console.log('Creating GetMembersUseCase');
+      return new GetMembersUseCase(container.resolve(SERVICE_KEYS.MEMBER_SERVICE));
+    });
+
+    container.register(SERVICE_KEYS.GET_MEMBER_BY_ID_USE_CASE, () => {
+      console.log('Creating GetMemberUseCase');
+      return new GetMemberByIdUseCase(container.resolve(SERVICE_KEYS.MEMBER_SERVICE));
+    });
+
+    container.register(SERVICE_KEYS.REGISTER_MEMBER_USE_CASE, () => {
+      console.log('Creating RegisterMemberUseCase');
+      return new RegisterMemberUseCase(container.resolve(SERVICE_KEYS.MEMBER_SERVICE));
+    });
+
     // Application Controllers
     console.log('🎮 Registering controllers...');
     container.register(SERVICE_KEYS.BOOKS_CONTROLLER, () => {
@@ -120,7 +165,9 @@ export const configureDependencies = (container: Container, navigate: (path: str
     container.register(SERVICE_KEYS.MEMBERS_CONTROLLER, () => {
       console.log('Creating MembersController');
       return new MembersController(
-        container.resolve(SERVICE_KEYS.MEMBER_SERVICE),
+        container.resolve(SERVICE_KEYS.GET_MEMBERS_USE_CASE),
+        container.resolve(SERVICE_KEYS.GET_MEMBER_BY_ID_USE_CASE),
+        container.resolve(SERVICE_KEYS.REGISTER_MEMBER_USE_CASE),
         container.resolve(SERVICE_KEYS.NAVIGATION_SERVICE),
         container.resolve(SERVICE_KEYS.NOTIFICATION_SERVICE)
       );
@@ -152,6 +199,12 @@ export const configureDependencies = (container: Container, navigate: (path: str
       SERVICE_KEYS.AUTHENTICATION_SERVICE,
       SERVICE_KEYS.BOOK_SERVICE,
       SERVICE_KEYS.MEMBER_SERVICE,
+      SERVICE_KEYS.CREATE_BOOK_USE_CASE,
+      SERVICE_KEYS.DELETE_BOOK_USE_CASE,
+      SERVICE_KEYS.GET_BOOKS_USE_CASE,
+      SERVICE_KEYS.GET_MEMBERS_USE_CASE,
+      SERVICE_KEYS.GET_MEMBER_BY_ID_USE_CASE,
+      SERVICE_KEYS.REGISTER_MEMBER_USE_CASE,
       SERVICE_KEYS.BOOKS_CONTROLLER,
       SERVICE_KEYS.MEMBERS_CONTROLLER,
       SERVICE_KEYS.AUTH_CONTROLLER

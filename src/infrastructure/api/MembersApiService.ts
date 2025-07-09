@@ -22,7 +22,7 @@ interface BackendMemberResponse {
 }
 
 // Registration DTO for /api/auth/register
-interface RegisterMemberDto {
+export interface RegisterMemberDto {
   firstName: string;
   lastName: string;
   email: string;
@@ -240,7 +240,6 @@ export class MembersApiService {
   }
 }
 
-// Export the DTO type
-export type { RegisterMemberDto };
-
+// Export types for use in other modules
 export type { Member };
+export type { BackendMemberResponse };

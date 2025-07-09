@@ -1,4 +1,3 @@
-//src/pages/members/MembersPage.tsx
 import React, { useState } from 'react';
 import { MembersController } from '../../application/controllers/MemberController';
 import { Member } from '../../domain/entities/Member';
