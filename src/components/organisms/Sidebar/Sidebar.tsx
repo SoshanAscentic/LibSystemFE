@@ -71,14 +71,14 @@ const menuItems: MenuItem[] = [
     icon: <Users className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/members',
     roles: ['MinorStaff', 'ManagementStaff', 'Administrator'],
-    implemented: true, // NOW IMPLEMENTED!
+    implemented: true, 
     children: [
       { 
         id: 'all-members', 
         label: 'All Members', 
         icon: <Users className="w-4 h-4 flex-shrink-0 text-black" />, 
         path: '/members',
-        implemented: true // NOW IMPLEMENTED!
+        implemented: true 
       },
       { 
         id: 'add-member', 
@@ -86,7 +86,7 @@ const menuItems: MenuItem[] = [
         icon: <Users className="w-4 h-4 flex-shrink-0 text-black" />, 
         path: '/members/add', 
         roles: ['Administrator'],
-        implemented: true // NOW IMPLEMENTED!
+        implemented: true 
       }
     ]
   },

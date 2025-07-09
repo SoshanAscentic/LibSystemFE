@@ -1,8 +1,9 @@
 export interface INavigationService {
+  [x: string]: any;
   navigateToBook(id: number): void;
   navigateToBooks(): void;
-  navigateToMember(id: number): void; // NEW
-  navigateToMembers(): void; // NEW
+  navigateToMember(id: number): void; 
+  navigateToMembers(): void; 
   navigateToDashboard(): void;
   navigateToLogin(): void;
   navigateToRegister(): void;
