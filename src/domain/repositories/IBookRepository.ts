@@ -11,16 +11,9 @@ export interface IBookRepository {
   ): Promise<Result<Book[], Error>>;
   
   findById(id: number): Promise<Result<Book | null, Error>>;
-  
-  search(
-    query: string,
-    filters?: BookFilters
-  ): Promise<Result<Book[], Error>>;
-  
+
   create(data: CreateBookDto): Promise<Result<Book, Error>>;
-  
-  update(id: number, data: UpdateBookDto): Promise<Result<Book, Error>>;
-  
+    
   delete(id: number): Promise<Result<void, Error>>;
   
   findByCategory(category: BookCategory): Promise<Result<Book[], Error>>;

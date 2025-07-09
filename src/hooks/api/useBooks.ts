@@ -70,26 +70,6 @@ export const useCreateBook = () => {
     },
   });
 };
-
-// Update book mutation
-export const useUpdateBook = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: CreateBookDto }) => 
-      booksApi.update(id, data),
-    onSuccess: (response, variables) => {
-      queryClient.invalidateQueries({ queryKey: booksQueryKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: booksQueryKeys.detail(variables.id) });
-      toast.success(response.message || 'Book updated successfully');
-    },
-    onError: (error: any) => {
-      const message = error.response?.data?.error?.message || 'Failed to update book';
-      toast.error(message);
-    },
-  });
-};
-
 // Delete book mutation
 export const useDeleteBook = () => {
   const queryClient = useQueryClient();

@@ -28,9 +28,8 @@ import { RegisterPage } from './pages/auth/RegisterPage';
 import { BooksPageContainer } from './presentation/components/BooksPageContainer';
 import { BookDetailsPageContainer } from './presentation/components/BookDetailsPageContainer';
 import { CreateBookPageContainer } from './presentation/components/CreateBookPageContainer';
-import { EditBookPageContainer } from './presentation/components/EditBookPageContainer';
 
-// Members Page Containers - NEW
+// Members Page Containers
 import { MembersPageContainer } from './presentation/components/MembersPageContainer';
 import { MemberDetailsPageContainer } from './presentation/components/MemberDetailsPageContainer';
 import { CreateMemberPageContainer } from './presentation/components/CreateMemberPageContainer';
@@ -84,7 +83,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleSearch = (query: string) => {
     console.log('Search:', query);
-    // TODO: Implement global search functionality
+    // TODO: Implement global search functionality if needed
   };
 
   if (isLoading) {
@@ -203,15 +202,9 @@ function AuthenticatedApp() {
         </ProtectedRoute>
       } />
 
-      <Route path="/books/:id/edit" element={
-        <ProtectedRoute resource="books" action="update">
-          <AppLayout>
-            <EditBookPageContainer />
-          </AppLayout>
-        </ProtectedRoute>
-      } />
+      {/* Remove edit route since there's no edit endpoint */}
 
-      {/* Members Routes - NEW - Protected and with role-based access */}
+      {/* Members Routes - Protected and with role-based access */}
       <Route path="/members" element={
         <ProtectedRoute resource="members" action="read">
           <AppLayout>

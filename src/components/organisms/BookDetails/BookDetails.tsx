@@ -4,15 +4,13 @@ import { Card } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { BookStatusBadge } from '../../molecules/BookStatusBadge';
-import { Edit, Trash2, BookOpen, Calendar, User, Tag } from 'lucide-react';
+import { Trash2, BookOpen, Calendar, User, Tag } from 'lucide-react';
 
 interface BookDetailsProps {
   book: Book;
-  onEdit?: (book: Book) => void;
   onDelete?: (book: Book) => void;
   onBorrow?: (book: Book) => void;
   onReturn?: (book: Book) => void;
-  canEdit?: boolean;
   canDelete?: boolean;
   canBorrow?: boolean;
   canReturn?: boolean;
@@ -35,11 +33,9 @@ const getCategoryColor = (category: string) => {
 
 export const BookDetails: React.FC<BookDetailsProps> = ({
   book,
-  onEdit,
   onDelete,
   onBorrow,
   onReturn,
-  canEdit = false,
   canDelete = false,
   canBorrow = false,
   canReturn = false,
@@ -69,17 +65,6 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
 
           {/* Actions */}
           <div className="flex gap-2">
-            {canEdit && onEdit && (
-              <Button 
-                variant="outline" 
-                onClick={() => onEdit(book)}
-                disabled={isLoading}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-            )}
-            
             {canDelete && onDelete && (
               <Button 
                 variant="destructive" 

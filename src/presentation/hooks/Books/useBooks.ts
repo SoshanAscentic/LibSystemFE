@@ -7,7 +7,7 @@ interface UseBooksResult {
   books: Book[];
   isLoading: boolean;
   error: string | null;
-  refresh: () => void;
+  refresh: () => Promise<void>;
 }
 
 export const useBooks = (
@@ -25,13 +25,19 @@ export const useBooks = (
     setIsLoading(true);
     setError(null);
     
-    const result = await controller.handleGetAllBooks(filters, sorting, pagination);
-    
-    setBooks(result.books);
-    setIsLoading(false);
-    
-    if (!result.success) {
-      setError(result.error || 'Failed to load books');
+    try {
+      const result = await controller.handleGetAllBooks(filters, sorting, pagination);
+      
+      setBooks(result.books);
+      
+      if (!result.success) {
+        setError(result.error || 'Failed to load books');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
+      setBooks([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 

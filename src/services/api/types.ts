@@ -44,19 +44,16 @@ export interface CreateBookDto {
   category: number; // 0=Fiction, 1=History, 2=Child
 }
 
-export interface UpdateBookDto extends CreateBookDto {
-  bookId: number;
-}
-
+// Simplified BookFilters - only category and author
 export interface BookFilters {
-  search?: string;
   category?: BookCategory;
   author?: string;
-  isAvailable?: boolean;
-  pageNumber?: number;
-  pageSize?: number;
+  // Sorting options
   sortBy?: 'title' | 'author' | 'publicationYear' | 'category';
   sortDirection?: 'asc' | 'desc';
+  // Pagination options
+  pageNumber?: number;
+  pageSize?: number;
 }
 
 // Member-specific types

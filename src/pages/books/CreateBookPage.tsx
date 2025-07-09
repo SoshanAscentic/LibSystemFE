@@ -1,3 +1,4 @@
+//src/pages/books/CreateBookPage.tsx
 import React, { useState } from 'react';
 import { BooksController } from '../../application/controllers/BooksController';
 import { CreateBookDto } from '../../domain/dtos/CreateBookDto';
@@ -13,13 +14,19 @@ export const CreateBookPage: React.FC<CreateBookPageProps> = ({ controller }) =>
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
-      window.history.back();
+    controller.handleNavigateToBooks();
   };
 
   const handleSubmit = async (data: CreateBookDto) => {
     setIsSubmitting(true);
-    await controller.handleCreateBook(data);
+    const result = await controller.handleCreateBook(data);
     setIsSubmitting(false);
+    
+    // Navigation is handled by the controller
+    if (!result.success) {
+      // Error handling is done by the controller via notifications
+      console.error('Book creation failed:', result.error);
+    }
   };
 
   return (
@@ -28,12 +35,12 @@ export const CreateBookPage: React.FC<CreateBookPageProps> = ({ controller }) =>
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={handleBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
+          Back to Books
         </Button>
       </div>
 
       {/* Form */}
-      <div className="max-w-2xl">
+      <div className="max-w-2xl mx-auto">
         <BookForm
           onSubmit={handleSubmit}
           onCancel={handleBack}

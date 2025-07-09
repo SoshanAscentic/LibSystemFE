@@ -16,11 +16,9 @@ interface BooksGridProps {
   onFiltersChange: (filters: Partial<BookFilters>) => void;
   onClearFilters: () => void;
   onBookView?: (book: Book) => void;
-  onBookEdit?: (book: Book) => void;
   onBookDelete?: (book: Book) => void;
   onBookBorrow?: (book: Book) => void;
   onAddBook?: () => void;
-  canEdit?: boolean;
   canDelete?: boolean;
   canBorrow?: boolean;
   canAdd?: boolean;
@@ -36,11 +34,9 @@ export const BooksGrid: React.FC<BooksGridProps> = ({
   onFiltersChange,
   onClearFilters,
   onBookView,
-  onBookEdit,
   onBookDelete,
   onBookBorrow,
   onAddBook,
-  canEdit = false,
   canDelete = false,
   canBorrow = false,
   canAdd = false,
@@ -128,10 +124,8 @@ export const BooksGrid: React.FC<BooksGridProps> = ({
               book={book}
               variant={viewMode === 'list' ? 'compact' : 'default'}
               onView={onBookView}
-              onEdit={onBookEdit}
               onDelete={onBookDelete}
               onBorrow={onBookBorrow}
-              canEdit={canEdit}
               canDelete={canDelete}
               canBorrow={canBorrow}
             />

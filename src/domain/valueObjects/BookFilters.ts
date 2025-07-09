@@ -1,10 +1,8 @@
 import { BookCategory } from "../entities/Book";
 
 export interface BookFilters {
-  readonly search?: string;
   readonly category?: BookCategory;
   readonly author?: string;
-  readonly isAvailable?: boolean;
 }
 
 export interface BookSorting {

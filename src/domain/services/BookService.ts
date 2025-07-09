@@ -100,47 +100,6 @@ export class BookService {
       );
     }
   }
-
-  async updateBook(id: number, data: UpdateBookDto): Promise<Result<Book, BusinessError>> {
-    if (!id || id <= 0) {
-      return Result.failure(
-        new ValidationError('Book ID must be a positive number', 'id', id)
-      );
-    }
-
-    // Validate input
-    const validation = this.validationService.validateCreateBook(data);
-    if (!validation.isValid) {
-      return Result.failure(
-        new ValidationError(validation.errors.join(', '), 'book_data', data)
-      );
-    }
-
-    try {
-      // Check if book exists
-      const existingBookResult = await this.repository.findById(id);
-      if (existingBookResult.isFailure || !existingBookResult.value) {
-        return Result.failure(
-          new BusinessError(`Book with ID ${id} not found`, 'NOT_FOUND')
-        );
-      }
-
-      const result = await this.repository.update(id, data);
-      
-      if (result.isFailure) {
-        return Result.failure(
-          new BusinessError('Failed to update book', 'UPDATE_ERROR', result.error)
-        );
-      }
-
-      return Result.success(result.value);
-    } catch (error) {
-      return Result.failure(
-        new BusinessError('Unexpected error while updating book', 'UNKNOWN_ERROR', error)
-      );
-    }
-  }
-
   async deleteBook(id: number): Promise<Result<void, BusinessError>> {
   console.log('BookService: Starting delete for book ID:', id);
   
@@ -205,35 +164,4 @@ export class BookService {
     );
   }
 }
-
-  async searchBooks(query: string, filters?: BookFilters): Promise<Result<Book[], BusinessError>> {
-    // Validate search query
-    const validation = this.validationService.validateSearchQuery(query);
-    if (!validation.isValid) {
-      return Result.failure(
-        new ValidationError(validation.errors.join(', '), 'search_query', query)
-      );
-    }
-
-    // Business rule: Empty or short queries return empty results
-    if (!query || query.trim().length < 2) {
-      return Result.success([]);
-    }
-
-    try {
-      const result = await this.repository.search(query.trim(), filters);
-      
-      if (result.isFailure) {
-        return Result.failure(
-          new BusinessError('Failed to search books', 'SEARCH_ERROR', result.error)
-        );
-      }
-
-      return Result.success(result.value);
-    } catch (error) {
-      return Result.failure(
-        new BusinessError('Unexpected error while searching books', 'UNKNOWN_ERROR', error)
-      );
-    }
-  }
 }

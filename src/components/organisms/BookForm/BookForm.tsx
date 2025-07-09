@@ -2,34 +2,37 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CreateBookDto, BookCategory } from '../../../services/api/types';
-import { Card } from '../../ui/card';
+import { CreateBookDto } from '../../../domain/dtos/CreateBookDto';
+import { BookCategory } from '../../../domain/entities/Book';
 import { Button } from '../../ui/button';
-import { FormField } from '../../molecules/FormField';
+import { Card, CardHeader, CardTitle, CardContent } from '../../molecules/Card';
+import { Input } from '../../atoms/Input';
 import { Label } from '../../atoms/Label';
-import { Save, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { BookOpen, User, Calendar, Tag } from 'lucide-react';
 
-const bookFormSchema = z.object({
+// Validation schema
+const bookSchema = z.object({
   title: z.string()
-    .min(1, 'Title is required')
+    .min(2, 'Title must be at least 2 characters')
     .max(200, 'Title must be less than 200 characters'),
   author: z.string()
-    .min(1, 'Author is required')
+    .min(2, 'Author must be at least 2 characters')
     .max(100, 'Author must be less than 100 characters'),
   publicationYear: z.number()
     .min(1450, 'Publication year must be 1450 or later')
     .max(new Date().getFullYear(), 'Publication year cannot be in the future'),
   category: z.number()
-    .min(0, 'Category is required')
-    .max(2, 'Invalid category')
+    .min(0, 'Please select a valid category')
+    .max(2, 'Please select a valid category'),
 });
 
-type BookFormData = z.infer<typeof bookFormSchema>;
+type BookFormData = z.infer<typeof bookSchema>;
 
 interface BookFormProps {
-  initialData?: Partial<CreateBookDto>;
+  initialData?: CreateBookDto;
   onSubmit: (data: CreateBookDto) => void;
-  onCancel?: () => void;
+  onCancel: () => void;
   isLoading?: boolean;
   title?: string;
   submitText?: string;
@@ -37,9 +40,9 @@ interface BookFormProps {
 }
 
 const categoryOptions = [
-  { value: 0, label: 'Fiction' },
-  { value: 1, label: 'History' },
-  { value: 2, label: 'Child' }
+  { value: 0, label: 'Fiction', description: '', icon: '📚' },
+  { value: 1, label: 'History', description: '', icon: '📜' },
+  { value: 2, label: 'Child', description: '', icon: '🧸' }
 ];
 
 export const BookForm: React.FC<BookFormProps> = ({
@@ -48,107 +51,139 @@ export const BookForm: React.FC<BookFormProps> = ({
   onCancel,
   isLoading = false,
   title = 'Add New Book',
-  submitText = 'Save Book',
+  submitText = 'Add Book',
   className
 }) => {
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid },
     setValue,
-    watch
+    watch,
+    formState: { errors, isValid }
   } = useForm<BookFormData>({
-    resolver: zodResolver(bookFormSchema),
-    defaultValues: {
-      title: initialData?.title || '',
-      author: initialData?.author || '',
-      publicationYear: initialData?.publicationYear || new Date().getFullYear(),
-      category: initialData?.category || 0
+    resolver: zodResolver(bookSchema),
+    defaultValues: initialData || {
+      title: '',
+      author: '',
+      publicationYear: new Date().getFullYear(),
+      category: 0
     },
     mode: 'onChange'
   });
 
+  const watchedCategory = watch('category');
+
   const handleFormSubmit = (data: BookFormData) => {
-    onSubmit(data);
+    const submitData: CreateBookDto = {
+      title: data.title.trim(),
+      author: data.author.trim(),
+      publicationYear: data.publicationYear,
+      category: data.category
+    };
+
+    onSubmit(submitData);
   };
 
   return (
     <Card className={className}>
-      <div className="p-6">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Fill in the details below to {initialData ? 'update' : 'add'} the book.
-          </p>
-        </div>
-
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BookOpen className="w-5 h-5" />
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-          {/* Title Field */}
-          <FormField
-            label="Title"
-            required
-            error={errors.title?.message}
-          >
-            <input
-              {...register('title')}
-              type="text"
-              placeholder="Enter book title"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={isLoading}
-            />
-          </FormField>
+          {/* Book Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900">Book Information</h3>
+            
+            <div>
+              <Label htmlFor="title" required>
+                Book Title
+              </Label>
+              <Input
+                id="title"
+                {...register('title')}
+                error={errors.title?.message}
+                leftIcon={<BookOpen className="h-4 w-4" />}
+                placeholder="Enter book title"
+                disabled={isLoading}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="author" required>
+                Author
+              </Label>
+              <Input
+                id="author"
+                {...register('author')}
+                error={errors.author?.message}
+                leftIcon={<User className="h-4 w-4" />}
+                placeholder="Enter author name"
+                disabled={isLoading}
+              />
+            </div>
+          </div>
 
-          {/* Author Field */}
-          <FormField
-            label="Author"
-            required
-            error={errors.author?.message}
-          >
-            <input
-              {...register('author')}
-              type="text"
-              placeholder="Enter author name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={isLoading}
-            />
-          </FormField>
-
-          {/* Publication Year Field */}
-          <FormField
-            label="Publication Year"
-            required
-            error={errors.publicationYear?.message}
-          >
-            <input
-              {...register('publicationYear', { valueAsNumber: true })}
-              type="number"
-              min="1450"
-              max={new Date().getFullYear()}
-              placeholder="Enter publication year"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={isLoading}
-            />
-          </FormField>
-
-          {/* Category Field */}
-          <FormField
-            label="Category"
-            required
-            error={errors.category?.message}
-          >
-            <select
-              {...register('category', { valueAsNumber: true })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={isLoading}
-            >
-              <option value="">Select a category</option>
-              {categoryOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </FormField>
+          {/* Publication Details */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900">Publication Details</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="publicationYear" required>
+                  Publication Year
+                </Label>
+                <Input
+                  id="publicationYear"
+                  type="number"
+                  {...register('publicationYear', { valueAsNumber: true })}
+                  error={errors.publicationYear?.message}
+                  leftIcon={<Calendar className="h-4 w-4" />}
+                  placeholder="e.g., 2023"
+                  min="1450"
+                  max={new Date().getFullYear()}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="category" required>
+                  Category
+                </Label>
+                <Select
+                  value={watchedCategory?.toString() || '0'}
+                  onValueChange={(value) => setValue('category', parseInt(value, 10))}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value.toString()}>
+                        <div className="flex items-center gap-2">
+                          <Tag className="h-4 w-4" />
+                          <div>
+                            <div className="font-medium flex items-center gap-1">
+                              <span>{option.icon}</span>
+                              {option.label}
+                            </div>
+                            <div className="text-sm text-gray-500">{option.description}</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.category && (
+                  <p className="text-sm text-red-600 mt-1">{errors.category.message}</p>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Form Actions */}
           <div className="flex gap-3 pt-4">
@@ -157,25 +192,19 @@ export const BookForm: React.FC<BookFormProps> = ({
               disabled={!isValid || isLoading}
               className="flex-1"
             >
-              <Save className="mr-2 h-4 w-4" />
-              {isLoading ? 'Saving...' : submitText}
+              {isLoading ? 'Adding Book...' : submitText}
             </Button>
-            
-            {onCancel && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                disabled={isLoading}
-                className="flex-1"
-              >
-                <X className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
           </div>
         </form>
-      </div>
+      </CardContent>
     </Card>
   );
 };

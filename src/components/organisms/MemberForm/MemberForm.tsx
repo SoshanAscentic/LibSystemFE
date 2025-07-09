@@ -51,9 +51,9 @@ interface MemberFormProps {
 }
 
 const memberTypeOptions = [
-  { value: '0', label: 'Regular Member', description: 'Standard library member' },
-  { value: '1', label: 'Minor Staff', description: 'Library staff with limited access' },
-  { value: '2', label: 'Management Staff', description: 'Library management with full access' }
+  { value: '0', label: 'Regular Member', description: '' },
+  { value: '1', label: 'Minor Staff', description: '' },
+  { value: '2', label: 'Management Staff', description: '' }
 ];
 
 export const MemberForm: React.FC<MemberFormProps> = ({
@@ -230,10 +230,9 @@ export const MemberForm: React.FC<MemberFormProps> = ({
             <Button
               type="submit"
               disabled={!isValid || isLoading}
-              loading={isLoading}
               className="flex-1"
             >
-              {submitText}
+              {isLoading ? 'Loading...' : submitText}
             </Button>
             <Button
               type="button"

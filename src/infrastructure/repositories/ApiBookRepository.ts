@@ -14,16 +14,44 @@ export class ApiBookRepository implements IBookRepository {
     pagination?: BookPagination
   ): Promise<Result<Book[], Error>> {
     try {
-      const params = {
-        ...filters,
-        ...sorting,
-        ...pagination
-      };
+      let response;
 
-      const response = await this.apiClient.get<Book[]>('/api/books', { params });
+      // If category filter is specified, use category endpoint
+      if (filters?.category) {
+        response = await this.apiClient.get<Book[]>(`/api/books/category/${filters.category}`);
+      }
+      // If author filter is specified, use author endpoint
+      else if (filters?.author) {
+        response = await this.apiClient.get<Book[]>(`/api/books/author/${encodeURIComponent(filters.author)}`);
+      }
+      // Otherwise get all books
+      else {
+        const params = {
+          ...sorting,
+          ...pagination
+        };
+        response = await this.apiClient.get<Book[]>('/api/books', { params });
+      }
       
       if (response.data.success) {
-        const books = response.data.data.map(this.mapToBook);
+        let books = response.data.data.map(this.mapToBook);
+        
+        // Apply client-side filtering if we got all books but have filters
+        if (!filters?.category && !filters?.author) {
+          // No server-side filtering was applied, return all books
+        } else if (filters?.category && filters?.author) {
+          // If both filters are applied, we need to get all books and filter client-side
+          // since we can only use one endpoint at a time
+          const allBooksResponse = await this.apiClient.get<Book[]>('/api/books');
+          if (allBooksResponse.data.success) {
+            books = allBooksResponse.data.data.map(this.mapToBook)
+              .filter(book => 
+                book.category === filters.category && 
+                book.author.toLowerCase().includes(filters.author!.toLowerCase())
+              );
+          }
+        }
+        
         return Result.success(books);
       } else {
         return Result.failure(new Error(response.data.error?.message || 'Failed to fetch books'));
@@ -54,25 +82,7 @@ export class ApiBookRepository implements IBookRepository {
     }
   }
 
-  async search(query: string, filters?: BookFilters): Promise<Result<Book[], Error>> {
-    try {
-      const params = {
-        search: query,
-        ...filters
-      };
-
-      const response = await this.apiClient.get<Book[]>('/api/books', { params });
-      
-      if (response.data.success) {
-        const books = response.data.data.map(this.mapToBook);
-        return Result.success(books);
-      } else {
-        return Result.failure(new Error(response.data.error?.message || 'Failed to search books'));
-      }
-    } catch (error: any) {
-      return Result.failure(new Error(error.message || 'Network error while searching books'));
-    }
-  }
+  // Remove search method since we're removing search functionality
 
   async create(data: CreateBookDto): Promise<Result<Book, Error>> {
     try {
@@ -89,21 +99,7 @@ export class ApiBookRepository implements IBookRepository {
     }
   }
 
-  async update(id: number, data: UpdateBookDto): Promise<Result<Book, Error>> {
-    try {
-      const response = await this.apiClient.put<Book>(`/api/books/${id}`, data);
-      
-      if (response.data.success) {
-        const book = this.mapToBook(response.data.data);
-        return Result.success(book);
-      } else {
-        return Result.failure(new Error(response.data.error?.message || 'Failed to update book'));
-      }
-    } catch (error: any) {
-      return Result.failure(new Error(error.message || 'Network error while updating book'));
-    }
-  }
-
+  
   async delete(id: number): Promise<Result<void, Error>> {
     try {
       console.log('ApiBookRepository: Making DELETE request for book ID:', id);
@@ -111,7 +107,6 @@ export class ApiBookRepository implements IBookRepository {
       const response = await this.apiClient.delete<void>(`/api/books/${id}`);
       console.log('ApiBookRepository: DELETE response:', response.data);
       
-      // Check if the response indicates success
       if (response.data.success) {
         console.log('ApiBookRepository: Delete successful');
         return Result.success(undefined);
@@ -124,7 +119,6 @@ export class ApiBookRepository implements IBookRepository {
     } catch (error: any) {
       console.error('ApiBookRepository: DELETE request failed:', error);
       
-      // Handle different HTTP status codes
       if (error.response) {
         const status = error.response.status;
         console.log('ApiBookRepository: HTTP status:', status);
@@ -132,9 +126,8 @@ export class ApiBookRepository implements IBookRepository {
         
         switch (status) {
           case 404:
-            // Book not found - this might actually be success if it's already deleted
             console.warn('ApiBookRepository: Book not found (404) - might already be deleted');
-            return Result.success(undefined); // Treat as success
+            return Result.success(undefined);
             
           case 400:
             const badRequestMessage = error.response.data?.error?.message || 

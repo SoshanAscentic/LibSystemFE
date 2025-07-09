@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BookCategory, BookFilters as BookFiltersType } from '../../../services/api/types';
 import { Button } from '../../ui/button';
 import { Card } from '../../ui/card';
 import { Badge } from '../../ui/badge';
+import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
 import { Filter, X, RotateCcw } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '../../ui/dropdown-menu';
 
@@ -21,11 +23,28 @@ export const BookFilters: React.FC<BookFiltersProps> = ({
   onClearFilters,
   className
 }) => {
+  const [authorInput, setAuthorInput] = useState(filters.author || '');
+
   const activeFiltersCount = Object.values(filters).filter(value => 
     value !== undefined && value !== '' && value !== null
   ).length;
 
   const hasActiveFilters = activeFiltersCount > 0;
+
+  const handleAuthorSubmit = () => {
+    onFiltersChange({ author: authorInput || undefined });
+  };
+
+  const handleAuthorKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleAuthorSubmit();
+    }
+  };
+
+  const handleAuthorClear = () => {
+    setAuthorInput('');
+    onFiltersChange({ author: undefined });
+  };
 
   return (
     <div className={className}>
@@ -71,28 +90,36 @@ export const BookFilters: React.FC<BookFiltersProps> = ({
 
             <DropdownMenuSeparator />
 
-            {/* Availability Filter */}
+            {/* Author Filter */}
             <div className="p-2">
-              <p className="text-sm font-medium mb-2">Availability</p>
-              <div className="grid grid-cols-1 gap-1">
-                <DropdownMenuItem
-                  onClick={() => onFiltersChange({ isAvailable: undefined })}
-                  className={filters.isAvailable === undefined ? 'bg-accent' : ''}
-                >
-                  All Books
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onFiltersChange({ isAvailable: true })}
-                  className={filters.isAvailable === true ? 'bg-accent' : ''}
-                >
-                  Available Only
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onFiltersChange({ isAvailable: false })}
-                  className={filters.isAvailable === false ? 'bg-accent' : ''}
-                >
-                  Borrowed Only
-                </DropdownMenuItem>
+              <p className="text-sm font-medium mb-2">Author</p>
+              <div className="space-y-2">
+                <Input
+                  placeholder="Enter author name..."
+                  value={authorInput}
+                  onChange={(e) => setAuthorInput(e.target.value)}
+                  onKeyPress={handleAuthorKeyPress}
+                  className="h-8"
+                />
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    onClick={handleAuthorSubmit}
+                    className="flex-1 h-7 text-xs"
+                  >
+                    Apply
+                  </Button>
+                  {filters.author && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleAuthorClear}
+                      className="h-7 text-xs"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -159,14 +186,17 @@ export const BookFilters: React.FC<BookFiltersProps> = ({
               </Badge>
             )}
 
-            {filters.isAvailable !== undefined && (
+            {filters.author && (
               <Badge variant="secondary" className="flex items-center gap-1">
-                {filters.isAvailable ? 'Available' : 'Borrowed'}
+                Author: {filters.author}
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-4 w-4 p-0 hover:bg-transparent"
-                  onClick={() => onFiltersChange({ isAvailable: undefined })}
+                  onClick={() => {
+                    setAuthorInput('');
+                    onFiltersChange({ author: undefined });
+                  }}
                 >
                   <X className="h-3 w-3" />
                 </Button>

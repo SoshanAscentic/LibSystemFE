@@ -3,7 +3,7 @@ import { Book } from '../../../services/api/types';
 import { Card } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
-import { BookOpen, Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { BookOpen, Trash2, MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../ui/dropdown-menu';
 import { cn } from '../../../lib/utils';
 
@@ -11,10 +11,8 @@ interface BookCardProps {
   book: Book;
   variant?: 'default' | 'compact' | 'detailed';
   onView?: (book: Book) => void;
-  onEdit?: (book: Book) => void;
   onDelete?: (book: Book) => void;
   onBorrow?: (book: Book) => void;
-  canEdit?: boolean;
   canDelete?: boolean;
   canBorrow?: boolean;
   className?: string;
@@ -37,10 +35,8 @@ export const BookCard: React.FC<BookCardProps> = ({
   book,
   variant = 'default',
   onView,
-  onEdit,
   onDelete,
   onBorrow,
-  canEdit = false,
   canDelete = false,
   canBorrow = false,
   className
@@ -79,7 +75,7 @@ export const BookCard: React.FC<BookCardProps> = ({
           </div>
 
           {/* Actions Menu */}
-          {(canEdit || canDelete || onView) && (
+          {(canDelete || onView) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -91,12 +87,6 @@ export const BookCard: React.FC<BookCardProps> = ({
                   <DropdownMenuItem onClick={() => onView(book)}>
                     <BookOpen className="mr-2 h-4 w-4" />
                     View Details
-                  </DropdownMenuItem>
-                )}
-                {canEdit && onEdit && (
-                  <DropdownMenuItem onClick={() => onEdit(book)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit Book
                   </DropdownMenuItem>
                 )}
                 {canDelete && onDelete && (

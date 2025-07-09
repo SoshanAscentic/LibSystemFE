@@ -5,7 +5,7 @@ import { Card } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../ui/dropdown-menu';
-import { MoreHorizontal, Eye, Edit, Trash2, BookOpen, ArrowUpDown, Plus } from 'lucide-react';
+import { MoreHorizontal, Eye, Trash2, BookOpen, ArrowUpDown, Plus } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 interface BooksTableProps {
@@ -13,11 +13,9 @@ interface BooksTableProps {
   filters: BookFilters;
   onFiltersChange: (filters: Partial<BookFilters>) => void;
   onBookView?: (book: Book) => void;
-  onBookEdit?: (book: Book) => void;
   onBookDelete?: (book: Book) => void;
   onBookBorrow?: (book: Book) => void;
   onAddBook?: () => void; // Keep prop for empty state
-  canEdit?: boolean;
   canDelete?: boolean;
   canBorrow?: boolean;
   canAdd?: boolean; // Keep prop for empty state
@@ -42,11 +40,9 @@ export const BooksTable: React.FC<BooksTableProps> = ({
   filters,
   onFiltersChange,
   onBookView,
-  onBookEdit,
   onBookDelete,
   onBookBorrow,
   onAddBook, // Keep for empty state
-  canEdit = false,
   canDelete = false,
   canBorrow = false,
   canAdd = false, // Keep for empty state
@@ -200,12 +196,6 @@ export const BooksTable: React.FC<BooksTableProps> = ({
                               View Details
                             </DropdownMenuItem>
                           )}
-                          {canEdit && onBookEdit && (
-                            <DropdownMenuItem onClick={() => onBookEdit(book)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Book
-                            </DropdownMenuItem>
-                          )}
                           {canDelete && onBookDelete && (
                             <DropdownMenuItem 
                               onClick={() => onBookDelete(book)}
@@ -233,7 +223,7 @@ export const BooksTable: React.FC<BooksTableProps> = ({
                 No books match your current filters.
               </p>
               
-              {/* KEEP: Conditional Add Book action in empty state only */}
+              {/* Conditional Add Book action in empty state only */}
               {canAdd && onAddBook && (
                 <div className="mt-4">
                   <Button onClick={onAddBook} variant="outline" className="flex items-center gap-2 mx-auto">
