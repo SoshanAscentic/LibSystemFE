@@ -1,9 +1,9 @@
-import { Result } from '../../shared/types/Result';
-import { BusinessError, ValidationError } from '../../shared/types/errors';
-import { Book } from '../entities/Book';
-import { CreateBookDto, UpdateBookDto } from '../dtos/CreateBookDto';
-import { BookFilters, BookSorting, BookPagination } from '../valueObjects/BookFilters';
-import { IBookRepository } from '../repositories/IBookRepository';
+import { Result } from '../../../shared/types/Result';
+import { BusinessError, ValidationError } from '../../../shared/types/errors';
+import { Book } from '../../entities/Book';
+import { CreateBookDto, UpdateBookDto } from '../../dtos/CreateBookDto';
+import { BookFilters, BookSorting, BookPagination } from '../../valueObjects/BookFilters';
+import { IBookRepository } from '../../repositories/IBookRepository';
 import { BookValidationService } from './BookValidationService';
 
 export class BookService {

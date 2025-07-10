@@ -1,4 +1,4 @@
-import { AuthenticationService } from "@/domain/services/AuthenticationService";
+import { AuthenticationService } from "@/domain/services/Auth/AuthenticationService";
 import { AuthApiService } from "@/infrastructure/api/AuthApiService";
 import { TokenService } from "@/infrastructure/services/TokenService";
 import { Container } from "@/shared/container/Container";

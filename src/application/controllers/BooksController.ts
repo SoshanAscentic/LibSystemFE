@@ -1,7 +1,7 @@
 //src/application/controllers/BooksController.ts
 import { ControllerResult } from '../../shared/interfaces/common';
 import { INavigationService, INotificationService } from '../../shared/interfaces/services';
-import { BookService } from '../../domain/services/BookService';
+import { BookService } from '../../domain/services/Book/BookService';
 import { Book } from '../../domain/entities/Book';
 import { CreateBookDto } from '../../domain/dtos/CreateBookDto';
 import { BookFilters, BookSorting, BookPagination } from '../../domain/valueObjects/BookFilters';

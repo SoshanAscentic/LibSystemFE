@@ -52,13 +52,6 @@ export const MembersTable: React.FC<MembersTableProps> = ({
           <h2 className="text-xl font-semibold text-gray-900">Library Members</h2>
           <p className="text-gray-600 mt-1">{members.length} member{members.length !== 1 ? 's' : ''} registered</p>
         </div>
-        
-        {canAdd && onAddMember && (
-          <Button onClick={onAddMember} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Register New Member
-          </Button>
-        )}
       </div>
 
       {/* Table */}

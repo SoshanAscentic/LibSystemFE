@@ -1,7 +1,7 @@
-import { Result } from '../../shared/types/Result';
-import { BusinessError, ValidationError } from '../../shared/types/errors';
-import { AuthApiService, AuthResponse, UserInfo, LoginRequest, RegisterRequest, ChangePasswordRequest } from '../../infrastructure/api/AuthApiService';
-import { TokenService, DecodedToken } from '../../infrastructure/services/TokenService';
+import { Result } from '../../../shared/types/Result';
+import { BusinessError, ValidationError } from '../../../shared/types/errors';
+import { AuthApiService, AuthResponse, UserInfo, LoginRequest, RegisterRequest, ChangePasswordRequest } from '../../../infrastructure/api/AuthApiService';
+import { TokenService, DecodedToken } from '../../../infrastructure/services/TokenService';
 import { AuthValidationService } from './AuthValidationService';
 
 export interface AuthUser {

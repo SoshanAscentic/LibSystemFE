@@ -1,8 +1,8 @@
-import { Result } from '../../shared/types/Result';
-import { BusinessError, ValidationError } from '../../shared/types/errors';
-import { Member } from '../entities/Member';
-import { RegisterMemberDto } from '../dtos/MemberDto';
-import { IMemberRepository } from '../repositories/IMemberRepository';
+import { Result } from '../../../shared/types/Result';
+import { BusinessError, ValidationError } from '../../../shared/types/errors';
+import { Member } from '../../entities/Member';
+import { RegisterMemberDto } from '../../dtos/MemberDto';
+import { IMemberRepository } from '../../repositories/IMemberRepository';
 import { MemberValidationService } from './MemberValidationService';
 
 export class MemberService {

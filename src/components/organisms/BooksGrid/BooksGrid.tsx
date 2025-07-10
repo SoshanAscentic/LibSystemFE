@@ -63,28 +63,6 @@ export const BooksGrid: React.FC<BooksGridProps> = ({
               {books.length} book{books.length !== 1 ? 's' : ''} available
             </p>
           </div>
-
-          <div className="flex items-center gap-2">
-            {/* View Mode Toggle */}
-            <div className="flex rounded-md border">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className="rounded-r-none"
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className="rounded-l-none"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
         </div>
 
         {/* Filters */}

@@ -13,30 +13,30 @@ import { NavigationServiceImpl } from '../services/NavigationServiceImpl';
 import { NotificationService } from '../services/NotificationService';
 
 // Domain Services
-import { AuthenticationService } from '../../domain/services/AuthenticationService';
-import { AuthValidationService } from '../../domain/services/AuthValidationService';
-import { BookService } from '../../domain/services/BookService';
-import { BookValidationService } from '../../domain/services/BookValidationService';
-import { MemberService } from '../../domain/services/MemberService';
-import { MemberValidationService } from '../../domain/services/MemberValidationService';
-import { BorrowingService } from '../../domain/services/BorrowingService';
-import { BorrowingValidationService } from '../../domain/services/BorrowingValidationService';
+import { AuthenticationService } from '../../domain/services/Auth/AuthenticationService';
+import { AuthValidationService } from '../../domain/services/Auth/AuthValidationService';
+import { BookService } from '../../domain/services/Book/BookService';
+import { BookValidationService } from '../../domain/services/Book/BookValidationService';
+import { MemberService } from '../../domain/services/Member/MemberService';
+import { MemberValidationService } from '../../domain/services/Member/MemberValidationService';
+import { BorrowingService } from '../../domain/services/Borrowing/BorrowingService';
+import { BorrowingValidationService } from '../../domain/services/Borrowing/BorrowingValidationService';
 
 // Application Use Cases
-import { CreateBookUseCase } from '../../application/useCases/CreaeteBookUseCase';
-import { DeleteBookUseCase } from '../../application/useCases/DeleteBookUseCase';
-import { GetBooksUseCase } from '../../application/useCases/GetBookUseCase';
+import { CreateBookUseCase } from '../../application/useCases/Book/CreateBookUseCase';
+import { DeleteBookUseCase } from '../../application/useCases/Book/DeleteBookUseCase';
+import { GetBooksUseCase } from '../../application/useCases/Book/GetBookUseCase';
 
 // Member Use Cases
-import { GetMembersUseCase } from '../../application/useCases/GetMembersUseCase';
-import { GetMemberByIdUseCase } from '../../application/useCases/GetMemberByIdUseCase';
-import { RegisterMemberUseCase } from '../../application/useCases/RegisterMemberUseCase';
+import { GetMembersUseCase } from '../../application/useCases/Member/GetMembersUseCase';
+import { GetMemberByIdUseCase } from '../../application/useCases/Member/GetMemberByIdUseCase';
+import { RegisterMemberUseCase } from '../../application/useCases/Member/RegisterMemberUseCase';
 
 // Borrowing Use Cases
-import { BorrowBookUseCase } from '../../application/useCases/BorrowBookUseCase';
-import { ReturnBookUseCase } from '../../application/useCases/ReturnBookUseCase';
-import { GetBorrowingHistoryUseCase } from '../../application/useCases/GetBorrowingHistoryUseCase';
-import { GetMemberBorrowingStatusUseCase } from '../../application/useCases/GetMemberBorrowingStatusUseCase';
+import { BorrowBookUseCase } from '../../application/useCases/Borrowing/BorrowBookUseCase';
+import { ReturnBookUseCase } from '../../application/useCases/Borrowing/ReturnBookUseCase';
+import { GetBorrowingHistoryUseCase } from '../../application/useCases/Borrowing/GetBorrowingHistoryUseCase';
+import { GetMemberBorrowingStatusUseCase } from '../../application/useCases/Borrowing/GetMemberBorrowingStatusUseCase';
 
 // Application Controllers
 import { BooksController } from '../../application/controllers/BooksController';

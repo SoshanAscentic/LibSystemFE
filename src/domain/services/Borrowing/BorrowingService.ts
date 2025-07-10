@@ -1,8 +1,8 @@
-import { Result } from '../../shared/types/Result';
-import { BusinessError, ValidationError } from '../../shared/types/errors';
-import { BorrowingRecord, MemberBorrowingStatus, BorrowingStatistics } from '../entities/BorrowingRecord';
-import { BorrowBookDto, ReturnBookDto, BorrowingFilters, BorrowingSorting, BorrowingPagination } from '../dtos/BorrowingDto';
-import { IBorrowingRepository } from '../repositories/IBorrowingRepository';
+import { Result } from '../../../shared/types/Result';
+import { BusinessError, ValidationError } from '../../../shared/types/errors';
+import { BorrowingRecord, MemberBorrowingStatus, BorrowingStatistics } from '../../entities/BorrowingRecord';
+import { BorrowBookDto, ReturnBookDto, BorrowingFilters, BorrowingSorting, BorrowingPagination } from '../../dtos/BorrowingDto';
+import { IBorrowingRepository } from '../../repositories/IBorrowingRepository';
 import { BorrowingValidationService } from './BorrowingValidationService';
 
 export class BorrowingService {

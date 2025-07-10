@@ -1,6 +1,6 @@
-import { ValidationResult } from '../../shared/interfaces/common';
+import { ValidationResult } from '../../../shared/interfaces/common';
 import { LoginCredentials, RegisterData } from './AuthenticationService';
-import { ChangePasswordRequest } from '../../infrastructure/api/AuthApiService';
+import { ChangePasswordRequest } from '../../../infrastructure/api/AuthApiService';
 
 export class AuthValidationService {
   

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { AuthenticationService, AuthUser, LoginCredentials, RegisterData } from '../domain/services/AuthenticationService';
+import { AuthenticationService, AuthUser, LoginCredentials, RegisterData } from '../domain/services/Auth/AuthenticationService';
 import { ControllerResult } from '../shared/interfaces/common';
 import { TokenService } from '@/infrastructure/services/TokenService';
 

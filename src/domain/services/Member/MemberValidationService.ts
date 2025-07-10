@@ -1,5 +1,5 @@
-import { ValidationResult } from '../../shared/interfaces/common';
-import { RegisterMemberDto } from '../dtos/MemberDto';
+import { ValidationResult } from '../../../shared/interfaces/common';
+import { RegisterMemberDto } from '../../dtos/MemberDto';
 
 export class MemberValidationService {
   

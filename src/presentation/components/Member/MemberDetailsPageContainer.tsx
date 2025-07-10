@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { MemberDetailsPage } from '../../pages/members/MemberDetailsPage';
-import { useMembersController } from '../hooks/Members/useMembersController';
+import { MemberDetailsPage } from '../../../pages/members/MemberDetailsPage';
+import { useMembersController } from '../../hooks/Members/useMembersController';
 
 export const MemberDetailsPageContainer: React.FC = () => {
   const { id } = useParams<{ id: string }>();

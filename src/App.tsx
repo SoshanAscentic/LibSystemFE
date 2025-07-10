@@ -25,19 +25,19 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 
 // Books Page Containers
-import { BooksPageContainer } from './presentation/components/BooksPageContainer';
-import { BookDetailsPageContainer } from './presentation/components/BookDetailsPageContainer';
-import { CreateBookPageContainer } from './presentation/components/CreateBookPageContainer';
+import { BooksPageContainer } from './presentation/components/Book/BooksPageContainer';
+import { BookDetailsPageContainer } from './presentation/components/Book/BookDetailsPageContainer';
+import { CreateBookPageContainer } from './presentation/components/Book/CreateBookPageContainer';
 
 // Members Page Containers
-import { MembersPageContainer } from './presentation/components/MembersPageContainer';
-import { MemberDetailsPageContainer } from './presentation/components/MemberDetailsPageContainer';
-import { CreateMemberPageContainer } from './presentation/components/CreateMemberPageContainer';
+import { MembersPageContainer } from './presentation/components/Member/MembersPageContainer';
+import { MemberDetailsPageContainer } from './presentation/components/Member/MemberDetailsPageContainer';
+import { CreateMemberPageContainer } from './presentation/components/Member/CreateMemberPageContainer';
 
 // Borrowing Page Containers
 import { BorrowingPageContainer } from './presentation/components/BorrowingPageContainer';
-import { BorrowBookPageContainer } from './presentation/components/BorrowBookPageContainer';
-import { ReturnBookPageContainer } from './presentation/components/ReturnBookPageContainer';
+import { BorrowBookPageContainer } from './presentation/components/Borrow/BorrowBookPageContainer';
+import { ReturnBookPageContainer } from './presentation/components/Borrow/ReturnBookPageContainer';
 import { BorrowingHistoryPageContainer } from './presentation/components/BorrowingHistoryPageContainer';
 
 // Loading Component

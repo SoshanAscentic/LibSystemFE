@@ -2,7 +2,7 @@ import { ControllerResult } from '../../shared/interfaces/common';
 import { INavigationService, INotificationService } from '../../shared/interfaces/services';
 import { BorrowingRecord, MemberBorrowingStatus } from '../../domain/entities/BorrowingRecord';
 import { BorrowBookDto, ReturnBookDto } from '../../domain/dtos/BorrowingDto';
-import { BorrowingService } from '../../domain/services/BorrowingService';
+import { BorrowingService } from '../../domain/services/Borrowing/BorrowingService';
 
 export class BorrowingController {
   constructor(

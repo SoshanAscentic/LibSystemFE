@@ -1,6 +1,6 @@
 import { ControllerResult } from '../../shared/interfaces/common';
 import { INavigationService, INotificationService } from '../../shared/interfaces/services';
-import { AuthenticationService, LoginCredentials, RegisterData } from '../../domain/services/AuthenticationService';
+import { AuthenticationService, LoginCredentials, RegisterData } from '../../domain/services/Auth/AuthenticationService';
 
 export interface LoginData {
   email: string;

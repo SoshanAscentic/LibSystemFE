@@ -1,5 +1,5 @@
-import { ValidationResult } from '../../shared/interfaces/common';
-import { BorrowBookDto, ReturnBookDto } from '../dtos/BorrowingDto';
+import { ValidationResult } from '../../../shared/interfaces/common';
+import { BorrowBookDto, ReturnBookDto } from '../../dtos/BorrowingDto';
 
 export class BorrowingValidationService {
   

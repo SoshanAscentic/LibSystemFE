@@ -1,6 +1,6 @@
 import { useContainer } from '../shared/hooks/useContainer';
 import { SERVICE_KEYS } from '../shared/container/ServiceKeys';
-import { AuthenticationService } from '../domain/services/AuthenticationService';
+import { AuthenticationService } from '../domain/services/Auth/AuthenticationService';
 
 export const useAuthService = (): AuthenticationService => {
   const container = useContainer();

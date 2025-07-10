@@ -4,9 +4,10 @@ import { Member } from '../../domain/entities/Member';
 import { RegisterMemberDto } from '../../domain/dtos/MemberDto';
 
 // Import Use Cases
-import { GetMembersUseCase } from '../useCases/GetMembersUseCase';
-import { GetMemberByIdUseCase } from '../useCases/GetMemberByIdUseCase';
-import { RegisterMemberUseCase } from '../useCases/RegisterMemberUseCase';
+import { GetMembersUseCase } from '../useCases/Member/GetMembersUseCase';
+import { GetMemberByIdUseCase } from '../useCases/Member/GetMemberByIdUseCase';
+import { RegisterMemberUseCase } from '../useCases/Member/RegisterMemberUseCase';
+import { MemberFilters } from '@/domain/valueObjects/MemberFilters';
 
 export class MembersController {
   constructor(
@@ -17,7 +18,7 @@ export class MembersController {
     private notificationService: INotificationService
   ) {}
 
-  async handleGetAllMembers(): Promise<{ members: Member[]; success: boolean; error?: string }> {
+  async handleGetAllMembers(filters: MemberFilters | undefined): Promise<{ members: Member[]; success: boolean; error?: string }> {
     try {
       const result = await this.getMembersUseCase.execute();
 
