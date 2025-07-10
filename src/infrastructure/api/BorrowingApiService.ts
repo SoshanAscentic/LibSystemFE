@@ -165,151 +165,158 @@ export class BorrowingApiService {
    */
   async getMemberBorrowingStatus(memberId: number): Promise<Result<MemberBorrowingStatus, Error>> {
     try {
-      console.log('BorrowingApiService: Getting member borrowing status for:', memberId);
+      console.log('BorrowingApiService: Getting member borrowing status for member:', memberId);
       
       const response = await this.apiClient.get(`/api/borrowing/member/${memberId}`);
       
-      console.log('BorrowingApiService: Member status response:', response.data);
+      console.log('BorrowingApiService: API response:', response.data);
+      console.log('BorrowingApiService: Full response object:', response);
       
       if (response.data.success) {
-        const backendData: BackendMemberBorrowingStatusResponse = response.data.data as BackendMemberBorrowingStatusResponse;
+        const backendData = response.data.data;
+        
+        
         const status = this.mapBackendResponseToMemberBorrowingStatus(backendData);
+        console.log('BorrowingApiService: Mapped status:', status);
+        console.log('BorrowingApiService: Current borrowings count:', status.currentBorrowings?.length || 0);
+        
         return Result.success(status);
       } else {
+        console.error('BorrowingApiService: API returned error:', response.data.error);
         return Result.failure(new Error(response.data.error?.message || 'Failed to fetch member borrowing status'));
       }
     } catch (error: any) {
       console.error('BorrowingApiService: Get member status error:', error);
+      console.error('BorrowingApiService: Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
       return this.handleApiError(error, 'get member borrowing status');
-    }
-  }
-
-  /**
-   * Get book borrowing history
-   */
-  async getBookBorrowingHistory(bookId: number): Promise<Result<BorrowingRecord[], Error>> {
-    try {
-      const response = await this.apiClient.get(`/api/borrowing/book/${bookId}`);
-      
-      if (response.data.success) {
-        const backendData: BackendBorrowingResponse[] = response.data.data as BackendBorrowingResponse[];
-        const history = backendData.map(item => this.mapBackendResponseToBorrowingRecord(item));
-        return Result.success(history);
-      } else {
-        return Result.failure(new Error(response.data.error?.message || 'Failed to fetch book borrowing history'));
-      }
-    } catch (error: any) {
-      return this.handleApiError(error, 'get book borrowing history');
-    }
-  }
-
-  /**
-   * Get overdue records
-   */
-  async getOverdueRecords(): Promise<Result<BorrowingRecord[], Error>> {
-    try {
-      const response = await this.apiClient.get('/api/borrowing/overdue');
-      
-      if (response.data.success) {
-        const backendData: BackendBorrowingResponse[] = response.data.data as BackendBorrowingResponse[];
-        const overdue = backendData.map(item => this.mapBackendResponseToBorrowingRecord(item));
-        return Result.success(overdue);
-      } else {
-        return Result.failure(new Error(response.data.error?.message || 'Failed to fetch overdue records'));
-      }
-    } catch (error: any) {
-      return this.handleApiError(error, 'get overdue records');
-    }
-  }
-
-  /**
-   * Get borrowing statistics
-   */
-  async getBorrowingStatistics(): Promise<Result<BorrowingStatistics, Error>> {
-    try {
-      const response = await this.apiClient.get('/api/borrowing/statistics');
-      
-      if (response.data.success) {
-        const backendData: BackendBorrowingStatisticsResponse = response.data.data as BackendBorrowingStatisticsResponse;
-        const statistics = this.mapBackendResponseToBorrowingStatistics(backendData);
-        return Result.success(statistics);
-      } else {
-        return Result.failure(new Error(response.data.error?.message || 'Failed to fetch borrowing statistics'));
-      }
-    } catch (error: any) {
-      return this.handleApiError(error, 'get borrowing statistics');
-    }
-  }
-
-  /**
-   * Map backend borrowing response to domain entity
-   */
-  private mapBackendResponseToBorrowingRecord(backendData: BackendBorrowingResponse): BorrowingRecord {
-    try {
-      if (!backendData) {
-        throw new Error('Backend borrowing data is null or undefined');
-      }
-
-      const borrowingRecord: BorrowingRecord = {
-        borrowingId: backendData.borrowingId || 0,
-        bookId: backendData.bookId || 0,
-        memberId: backendData.memberId || 0,
-        bookTitle: backendData.bookTitle || '',
-        bookAuthor: backendData.bookAuthor || '',
-        memberName: backendData.memberName || '',
-        memberEmail: backendData.memberEmail || '',
-        borrowedAt: new Date(backendData.borrowedAt || new Date()),
-        dueDate: new Date(backendData.dueDate || new Date()),
-        returnedAt: backendData.returnedAt ? new Date(backendData.returnedAt) : undefined,
-        isReturned: backendData.isReturned || false,
-        isOverdue: backendData.isOverdue || false,
-        daysBorrowed: backendData.daysBorrowed || 0,
-        daysOverdue: backendData.daysOverdue || 0,
-        lateFee: backendData.lateFee || 0,
-        status: this.mapStatusFromString(backendData.status),
-      };
-
-      return borrowingRecord;
-    } catch (error) {
-      console.error('BorrowingApiService: Borrowing mapping error:', error);
-      throw new Error(`Failed to map borrowing record: ${error}`);
     }
   }
 
   /**
    * Map backend member borrowing status response to domain entity
    */
-  private mapBackendResponseToMemberBorrowingStatus(backendData: BackendMemberBorrowingStatusResponse): MemberBorrowingStatus {
+  private mapBackendResponseToMemberBorrowingStatus(backendData: any): MemberBorrowingStatus {
     try {
       if (!backendData) {
         throw new Error('Backend member borrowing status data is null or undefined');
       }
 
+      console.log('BorrowingApiService: Mapping backend data:', backendData);
+      console.log('BorrowingApiService: All backend data keys:', Object.keys(backendData));
+
+      // Try different possible field names for current borrowings
+      let currentBorrowingsData = backendData.currentBorrowings || 
+                                 backendData.activeBorrowings || 
+                                 backendData.borrowings || 
+                                 backendData.currentLoans || 
+                                 backendData.activeLoans || 
+                                 [];
+
+      console.log('BorrowingApiService: Current borrowings data:', currentBorrowingsData);
+      console.log('BorrowingApiService: Current borrowings type:', typeof currentBorrowingsData);
+      console.log('BorrowingApiService: Current borrowings length:', currentBorrowingsData?.length || 0);
+
+      // Map current borrowings
+      const currentBorrowings = Array.isArray(currentBorrowingsData) 
+        ? currentBorrowingsData.map((item, index) => {
+            console.log(`BorrowingApiService: Mapping borrowing ${index}:`, item);
+            try {
+              return this.mapBackendResponseToBorrowingRecord(item);
+            } catch (error) {
+              console.error(`BorrowingApiService: Error mapping borrowing ${index}:`, error);
+              return null;
+            }
+          }).filter(item => item !== null)
+        : [];
+
+      console.log('BorrowingApiService: Mapped current borrowings:', currentBorrowings);
+
+      // Try different possible field names for recent history
+      let recentHistoryData = backendData.recentHistory || 
+                             backendData.history || 
+                             backendData.borrowingHistory || 
+                             [];
+
+      // Try different possible field names for overdue borrowings
+      let overdueBorrowingsData = backendData.overdueBorrowings || 
+                                 backendData.overdueBooks || 
+                                 backendData.overdue || 
+                                 [];
+
       const status: MemberBorrowingStatus = {
-        memberId: backendData.memberId || 0,
-        memberName: backendData.memberName || '',
-        memberEmail: backendData.memberEmail || '',
-        memberType: backendData.memberType || '',
-        borrowedBooksCount: backendData.borrowedBooksCount || 0,
-        maxBooksAllowed: backendData.maxBooksAllowed || 0,
-        canBorrowBooks: backendData.canBorrowBooks || false,
-        canBorrowMoreBooks: backendData.canBorrowMoreBooks || false,
-        currentBorrowings: (backendData.currentBorrowings || []).map(item => 
-          this.mapBackendResponseToBorrowingRecord(item)
-        ),
-        recentHistory: (backendData.recentHistory || []).map(item => 
-          this.mapBackendResponseToBorrowingRecord(item)
-        ),
-        overdueBorrowings: (backendData.overdueBorrowings || []).map(item => 
-          this.mapBackendResponseToBorrowingRecord(item)
-        ),
-        totalLateFees: backendData.totalLateFees || 0,
+        memberId: backendData.memberId || backendData.memberID || 0,
+        memberName: backendData.memberName || backendData.name || '',
+        memberEmail: backendData.memberEmail || backendData.email || '',
+        memberType: backendData.memberType || backendData.type || '',
+        borrowedBooksCount: backendData.borrowedBooksCount || backendData.borrowedBooks || 0,
+        maxBooksAllowed: backendData.maxBooksAllowed || backendData.maxBooks || 5,
+        canBorrowBooks: backendData.canBorrowBooks ?? true,
+        canBorrowMoreBooks: backendData.canBorrowMoreBooks ?? true,
+        currentBorrowings: currentBorrowings,
+        recentHistory: Array.isArray(recentHistoryData) 
+          ? recentHistoryData.map(item => this.mapBackendResponseToBorrowingRecord(item)).filter(item => item !== null)
+          : [],
+        overdueBorrowings: Array.isArray(overdueBorrowingsData) 
+          ? overdueBorrowingsData.map(item => this.mapBackendResponseToBorrowingRecord(item)).filter(item => item !== null)
+          : [],
+        totalLateFees: backendData.totalLateFees || backendData.lateFees || 0,
       };
+
+      console.log('BorrowingApiService: Final mapped status:', status);
+      console.log('BorrowingApiService: Final current borrowings count:', status.currentBorrowings.length);
 
       return status;
     } catch (error) {
       console.error('BorrowingApiService: Member status mapping error:', error);
+      console.error('BorrowingApiService: Backend data that failed to map:', backendData);
       throw new Error(`Failed to map member borrowing status: ${error}`);
+    }
+  }
+
+  /**
+   * Map backend borrowing response to domain entity
+   */
+  private mapBackendResponseToBorrowingRecord(backendData: any): BorrowingRecord {
+    try {
+      if (!backendData) {
+        console.warn('BorrowingApiService: Null/undefined borrowing data, skipping');
+        return null;
+      }
+
+      console.log('BorrowingApiService: Mapping borrowing record:', backendData);
+      console.log('BorrowingApiService: Borrowing record keys:', Object.keys(backendData));
+
+      const borrowingRecord: BorrowingRecord = {
+        borrowingId: backendData.borrowingId || backendData.id || backendData.borrowingID || 0,
+        bookId: backendData.bookId || backendData.bookID || 0,
+        memberId: backendData.memberId || backendData.memberID || 0,
+        bookTitle: backendData.bookTitle || backendData.title || '',
+        bookAuthor: backendData.bookAuthor || backendData.author || '',
+        memberName: backendData.memberName || backendData.name || '',
+        memberEmail: backendData.memberEmail || backendData.email || '',
+        borrowedAt: new Date(backendData.borrowedAt || backendData.dateBorrowed || new Date()),
+        dueDate: new Date(backendData.dueDate || backendData.dateDue || new Date()),
+        returnedAt: backendData.returnedAt || backendData.dateReturned ? new Date(backendData.returnedAt || backendData.dateReturned) : undefined,
+        isReturned: backendData.isReturned || backendData.returned || false,
+        isOverdue: backendData.isOverdue || backendData.overdue || false,
+        daysBorrowed: backendData.daysBorrowed || backendData.daysActive || 0,
+        daysOverdue: backendData.daysOverdue || backendData.overduedays || 0,
+        lateFee: backendData.lateFee || backendData.fee || 0,
+        status: this.mapStatusFromString(backendData.status || 'Active'),
+      };
+
+      console.log('BorrowingApiService: Mapped borrowing record:', borrowingRecord);
+
+      return borrowingRecord;
+    } catch (error) {
+      console.error('BorrowingApiService: Borrowing mapping error:', error);
+      console.error('BorrowingApiService: Backend data that failed to map:', backendData);
+      throw new Error(`Failed to map borrowing record: ${error}`);
     }
   }
 

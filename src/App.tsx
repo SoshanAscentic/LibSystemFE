@@ -34,6 +34,12 @@ import { MembersPageContainer } from './presentation/components/MembersPageConta
 import { MemberDetailsPageContainer } from './presentation/components/MemberDetailsPageContainer';
 import { CreateMemberPageContainer } from './presentation/components/CreateMemberPageContainer';
 
+// Borrowing Page Containers
+import { BorrowingPageContainer } from './presentation/components/BorrowingPageContainer';
+import { BorrowBookPageContainer } from './presentation/components/BorrowBookPageContainer';
+import { ReturnBookPageContainer } from './presentation/components/ReturnBookPageContainer';
+import { BorrowingHistoryPageContainer } from './presentation/components/BorrowingHistoryPageContainer';
+
 // Loading Component
 import { LoadingState } from './components/molecules/LoadingState';
 
@@ -229,18 +235,24 @@ function AuthenticatedApp() {
         </ProtectedRoute>
       } />
 
-      {/* Future routes */}
-      <Route path="/borrowing" element={
-        <ProtectedRoute resource="borrowing" action="read">
+      {/* Borrowing Routes - Simplified */}
+      <Route path="/borrowing" element={<Navigate to="/borrowing/borrow" replace />} />
+
+      <Route path="/borrowing/borrow" element={
+        <ProtectedRoute resource="borrowing" action="borrow">
           <AppLayout>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold">Borrowing Management</h1>
-              <p className="text-gray-600 mt-2">Coming soon in the next phase...</p>
-            </div>
+            <BorrowBookPageContainer />
           </AppLayout>
         </ProtectedRoute>
       } />
 
+      <Route path="/borrowing/return" element={
+        <ProtectedRoute resource="borrowing" action="borrow">
+          <AppLayout>
+            <ReturnBookPageContainer />
+          </AppLayout>
+        </ProtectedRoute>
+      } />
       {/* Catch all - redirect to dashboard if authenticated, login if not */}
       <Route path="*" element={
         isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />

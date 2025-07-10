@@ -35,6 +35,15 @@ export class NavigationServiceImpl implements INavigationService {
     this.navigate('/register');
   }
 
+  // Updated borrowing navigation methods - removed dashboard
+  navigateToBorrowBook(): void {
+    this.navigate('/borrowing/borrow');
+  }
+
+  navigateToReturnBook(): void {
+    this.navigate('/borrowing/return');
+  }
+
   goBack(): void {
     this.navigate(-1);
   }

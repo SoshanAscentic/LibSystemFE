@@ -34,10 +34,9 @@ export const SERVICE_KEYS = {
   GET_MEMBER_BY_ID_USE_CASE: 'GetMemberUseCase',
   REGISTER_MEMBER_USE_CASE: 'RegisterMemberUseCase',
 
-  // Use Cases - Borrowing
+  // Use Cases - Borrowing (simplified)
   BORROW_BOOK_USE_CASE: 'BorrowBookUseCase',
   RETURN_BOOK_USE_CASE: 'ReturnBookUseCase',
-  GET_BORROWING_HISTORY_USE_CASE: 'GetBorrowingHistoryUseCase',
   GET_MEMBER_BORROWING_STATUS_USE_CASE: 'GetMemberBorrowingStatusUseCase',
   
   // Application Controllers
@@ -49,4 +48,4 @@ export const SERVICE_KEYS = {
   // UI Services
   NAVIGATION_SERVICE: 'NavigationService',
   NOTIFICATION_SERVICE: 'NotificationService',
-} as const;
+} as const

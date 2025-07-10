@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ReturnBookDto } from '../../../domain/dtos/BorrowingDto';
 import { BorrowingRecord } from '../../../domain/entities/BorrowingRecord';
+import { Member } from '../../../domain/entities/Member';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -12,9 +13,10 @@ import { SearchBar } from '../../molecules/SearchBar';
 import { BorrowingCard } from '../../molecules/BorrowingCard';
 import { LoadingState } from '../../molecules/LoadingState';
 import { Badge } from '../../ui/badge';
-import { RotateCcw, Search, AlertCircle, CheckCircle, Calendar, DollarSign } from 'lucide-react';
+import { RotateCcw, Search, AlertCircle, CheckCircle, Calendar, DollarSign, User } from 'lucide-react';
 import { formatDate, calculateDaysOverdue } from '../../../lib/utils';
 import { cn } from '../../../lib/utils';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface ReturnBookFormData {
   borrowingId: string;
@@ -28,10 +30,15 @@ interface ReturnBookFormProps {
   onCancel: () => void;
   isLoading?: boolean;
   activeBorrowings?: BorrowingRecord[];
+  activeMembers?: Member[];
   isLoadingBorrowings?: boolean;
+  isLoadingMembers?: boolean;
   onSearchBorrowings?: (query: string) => void;
   selectedBorrowing?: BorrowingRecord | null;
+  selectedMember?: Member | null;
   onSelectBorrowing?: (borrowing: BorrowingRecord) => void;
+  onSelectMember?: (member: Member) => void;
+  onMemberBorrowingsLoad?: (memberId: number) => void;
   className?: string;
 }
 
@@ -40,14 +47,29 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
   onCancel,
   isLoading = false,
   activeBorrowings = [],
+  activeMembers = [],
   isLoadingBorrowings = false,
+  isLoadingMembers = false,
   onSearchBorrowings,
   selectedBorrowing,
+  selectedMember,
   onSelectBorrowing,
+  onSelectMember,
+  onMemberBorrowingsLoad,
   className
 }) => {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [step, setStep] = useState<'select-borrowing' | 'confirm-return'>('select-borrowing');
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [step, setStep] = useState<'select-member' | 'select-borrowing' | 'confirm-return'>('select-member');
+  const [internalSelectedMember, setInternalSelectedMember] = useState<Member | null>(null);
+  const [internalSelectedBorrowing, setInternalSelectedBorrowing] = useState<BorrowingRecord | null>(null);
+
+  // Check if user can select other members
+  const canSelectOtherMembers = user?.role === 'ManagementStaff' || user?.role === 'Administrator';
+
+  // Find current user as member
+  const currentUserAsMember = activeMembers.find(member => member.email === user?.email);
 
   const {
     register,
@@ -66,19 +88,32 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
 
   const watchedValues = watch();
 
+  // Initialize step based on user permissions
+  useEffect(() => {
+    if (!canSelectOtherMembers && currentUserAsMember) {
+      // Skip member selection for regular members
+      setInternalSelectedMember(currentUserAsMember);
+      onSelectMember?.(currentUserAsMember);
+      onMemberBorrowingsLoad?.(currentUserAsMember.memberId);
+      setStep('select-borrowing');
+    } else {
+      setStep('select-member');
+    }
+  }, [canSelectOtherMembers, currentUserAsMember, onSelectMember, onMemberBorrowingsLoad]);
+
   // Auto-advance to confirmation step when borrowing is selected
   useEffect(() => {
-    if (step === 'select-borrowing' && selectedBorrowing && watchedValues.borrowingId) {
+    if (step === 'select-borrowing' && internalSelectedBorrowing && watchedValues.borrowingId) {
       setStep('confirm-return');
     }
-  }, [selectedBorrowing, watchedValues.borrowingId, step]);
+  }, [internalSelectedBorrowing, watchedValues.borrowingId, step]);
 
   // Set form values when selection changes
   useEffect(() => {
-    if (selectedBorrowing) {
-      setValue('borrowingId', selectedBorrowing.borrowingId.toString());
+    if (internalSelectedBorrowing) {
+      setValue('borrowingId', internalSelectedBorrowing.borrowingId.toString());
     }
-  }, [selectedBorrowing, setValue]);
+  }, [internalSelectedBorrowing, setValue]);
 
   const handleFormSubmit = async (data: ReturnBookFormData) => {
     const returnData: ReturnBookDto = {
@@ -93,8 +128,31 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
 
   const handleReset = () => {
     reset();
-    setStep('select-borrowing');
+    setInternalSelectedMember(null);
+    setInternalSelectedBorrowing(null);
     setSearchQuery('');
+    setMemberSearchQuery('');
+    
+    if (!canSelectOtherMembers && currentUserAsMember) {
+      setInternalSelectedMember(currentUserAsMember);
+      onSelectMember?.(currentUserAsMember);
+      onMemberBorrowingsLoad?.(currentUserAsMember.memberId);
+      setStep('select-borrowing');
+    } else {
+      setStep('select-member');
+    }
+  };
+
+  const handleMemberSelect = (member: Member) => {
+    setInternalSelectedMember(member);
+    onSelectMember?.(member);
+    onMemberBorrowingsLoad?.(member.memberId);
+  };
+
+  const handleBorrowingSelect = (borrowing: BorrowingRecord) => {
+    setInternalSelectedBorrowing(borrowing);
+    onSelectBorrowing?.(borrowing);
+    setValue('borrowingId', borrowing.borrowingId.toString());
   };
 
   const calculateLateFee = (borrowing: BorrowingRecord, returnDate?: string): number => {
@@ -108,19 +166,28 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
     return daysLate * 0.50;
   };
 
-  const filteredBorrowings = activeBorrowings.filter(borrowing => {
+  // Filter borrowings by selected member
+  const memberBorrowings = activeBorrowings.filter(borrowing => 
+    !internalSelectedMember || borrowing.memberId === internalSelectedMember.memberId
+  );
+
+  const filteredBorrowings = memberBorrowings.filter(borrowing => {
     if (searchQuery === '') return true;
     
     const query = searchQuery.toLowerCase();
     return (
       borrowing.bookTitle.toLowerCase().includes(query) ||
-      borrowing.bookAuthor.toLowerCase().includes(query) ||
-      borrowing.memberName.toLowerCase().includes(query) ||
-      borrowing.memberEmail.toLowerCase().includes(query)
+      borrowing.bookAuthor.toLowerCase().includes(query)
     );
   });
 
-  const estimatedLateFee = selectedBorrowing ? calculateLateFee(selectedBorrowing, watchedValues.returnDate) : 0;
+  const filteredMembers = activeMembers.filter(member =>
+    memberSearchQuery === '' ||
+    member.fullName.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+    member.email.toLowerCase().includes(memberSearchQuery.toLowerCase())
+  );
+
+  const estimatedLateFee = internalSelectedBorrowing ? calculateLateFee(internalSelectedBorrowing, watchedValues.returnDate) : 0;
 
   return (
     <Card className={cn("max-w-4xl mx-auto", className)}>
@@ -132,46 +199,129 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
         
         {/* Progress Steps */}
         <div className="flex items-center gap-4 mt-4">
+          {canSelectOtherMembers && (
+            <div className={cn(
+              "flex items-center gap-2 px-3 py-1 rounded-full text-sm",
+              step === 'select-member' ? "bg-blue-100 text-blue-800" : 
+              internalSelectedMember ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+            )}>
+              <User className="w-4 h-4" />
+              1. Select Member
+              {internalSelectedMember && <CheckCircle className="w-4 h-4" />}
+            </div>
+          )}
           <div className={cn(
             "flex items-center gap-2 px-3 py-1 rounded-full text-sm",
             step === 'select-borrowing' ? "bg-blue-100 text-blue-800" : 
-            selectedBorrowing ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+            internalSelectedBorrowing ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
           )}>
             <Search className="w-4 h-4" />
-            1. Select Borrowing
-            {selectedBorrowing && <CheckCircle className="w-4 h-4" />}
+            {canSelectOtherMembers ? '2.' : '1.'} Select Borrowing
+            {internalSelectedBorrowing && <CheckCircle className="w-4 h-4" />}
           </div>
           <div className={cn(
             "flex items-center gap-2 px-3 py-1 rounded-full text-sm",
             step === 'confirm-return' ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600"
           )}>
             <RotateCcw className="w-4 h-4" />
-            2. Confirm Return
+            {canSelectOtherMembers ? '3.' : '2.'} Confirm Return
           </div>
         </div>
       </CardHeader>
 
       <CardContent>
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-          {/* Step 1: Select Borrowing */}
-          {step === 'select-borrowing' && (
+          {/* Step 1: Select Member (only for staff) */}
+          {step === 'select-member' && canSelectOtherMembers && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Select Book to Return</h3>
+                <h3 className="text-lg font-medium">Select Member</h3>
                 <Button variant="outline" size="sm" onClick={handleReset}>
                   Reset
                 </Button>
               </div>
 
               <SearchBar
+                value={memberSearchQuery}
+                onChange={setMemberSearchQuery}
+                placeholder="Search members by name or email..."
+                className="w-full"
+              />
+
+              {isLoadingMembers ? (
+                <LoadingState message="Loading members..." />
+              ) : (
+                <div className="grid gap-3 max-h-96 overflow-y-auto">
+                  {filteredMembers.map((member) => (
+                    <div
+                      key={member.memberId}
+                      className={cn(
+                        "p-4 border rounded-lg cursor-pointer transition-colors",
+                        internalSelectedMember?.memberId === member.memberId
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      )}
+                      onClick={() => handleMemberSelect(member)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-medium">{member.fullName}</h4>
+                          <p className="text-sm text-gray-600">{member.email}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {member.memberType} • {member.borrowedBooksCount} books borrowed
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {member.isActive ? (
+                            <span className="text-green-600 text-xs">Active</span>
+                          ) : (
+                            <span className="text-red-600 text-xs">Inactive</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {filteredMembers.length === 0 && (
+                    <p className="text-center text-gray-500 py-8">
+                      No members found
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 2: Select Borrowing */}
+          {step === 'select-borrowing' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Select Book to Return</h3>
+                {canSelectOtherMembers && (
+                  <Button variant="outline" size="sm" onClick={() => setStep('select-member')}>
+                    Change Member
+                  </Button>
+                )}
+              </div>
+
+              {/* Selected Member Info */}
+              {internalSelectedMember && (
+                <Alert>
+                  <User className="w-4 h-4" />
+                  <AlertDescription>
+                    {canSelectOtherMembers ? 'Selected Member' : 'Returning for'}: <strong>{internalSelectedMember.fullName}</strong> ({internalSelectedMember.email})
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <SearchBar
                 value={searchQuery}
                 onChange={setSearchQuery}
-                placeholder="Search by book title, author, or member name..."
+                placeholder="Search by book title or author..."
                 className="w-full"
               />
 
               {isLoadingBorrowings ? (
-                <LoadingState message="Loading active borrowings..." />
+                <LoadingState message="Loading borrowed books..." />
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {filteredBorrowings.map((borrowing) => (
@@ -179,14 +329,11 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
                       key={borrowing.borrowingId}
                       className={cn(
                         "p-4 border rounded-lg cursor-pointer transition-all",
-                        selectedBorrowing?.borrowingId === borrowing.borrowingId
+                        internalSelectedBorrowing?.borrowingId === borrowing.borrowingId
                           ? "border-blue-500 bg-blue-50 shadow-sm"
                           : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
                       )}
-                      onClick={() => {
-                        onSelectBorrowing?.(borrowing);
-                        setValue('borrowingId', borrowing.borrowingId.toString());
-                      }}
+                      onClick={() => handleBorrowingSelect(borrowing)}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -199,9 +346,6 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
                             )}
                           </div>
                           <p className="text-sm text-gray-600">by {borrowing.bookAuthor}</p>
-                          <p className="text-sm text-gray-600">
-                            Borrowed by: {borrowing.memberName} ({borrowing.memberEmail})
-                          </p>
                           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                             <span>Borrowed: {formatDate(borrowing.borrowedAt)}</span>
                             <span>Due: {formatDate(borrowing.dueDate)}</span>
@@ -223,7 +367,12 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
                     <div className="text-center py-12">
                       <RotateCcw className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <p className="text-gray-500">
-                        {searchQuery ? 'No borrowings found matching your search' : 'No active borrowings found'}
+                        {internalSelectedMember 
+                          ? `No borrowed books found for ${internalSelectedMember.fullName}`
+                          : searchQuery 
+                            ? 'No borrowings found matching your search' 
+                            : 'No active borrowings found'
+                        }
                       </p>
                     </div>
                   )}
@@ -232,8 +381,8 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
             </div>
           )}
 
-          {/* Step 2: Confirm Return */}
-          {step === 'confirm-return' && selectedBorrowing && (
+          {/* Step 3: Confirm Return */}
+          {step === 'confirm-return' && internalSelectedBorrowing && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Confirm Book Return</h3>
@@ -244,18 +393,18 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
 
               {/* Borrowing Summary */}
               <BorrowingCard
-                borrowing={selectedBorrowing}
-                showMemberInfo={true}
+                borrowing={internalSelectedBorrowing}
+                showMemberInfo={canSelectOtherMembers}
                 showBookInfo={true}
                 className="bg-blue-50 border-blue-200"
               />
 
               {/* Overdue Warning */}
-              {selectedBorrowing.isOverdue && (
+              {internalSelectedBorrowing.isOverdue && (
                 <Alert>
                   <AlertCircle className="w-4 h-4" />
                   <AlertDescription>
-                    <strong>Overdue Notice:</strong> This book is {selectedBorrowing.daysOverdue} days overdue.
+                    <strong>Overdue Notice:</strong> This book is {internalSelectedBorrowing.daysOverdue} days overdue.
                     {estimatedLateFee > 0 && (
                       <>
                         {' '}An estimated late fee of <strong>${estimatedLateFee.toFixed(2)}</strong> will be applied.
@@ -276,7 +425,7 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
                     required: 'Return date is required',
                     validate: (value) => {
                       const selected = new Date(value);
-                      const borrowed = new Date(selectedBorrowing.borrowedAt);
+                      const borrowed = new Date(internalSelectedBorrowing.borrowedAt);
                       const today = new Date();
                       
                       if (selected < borrowed) {
@@ -334,7 +483,7 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
                     <h4 className="font-medium text-red-800">Late Fee Calculation</h4>
                   </div>
                   <div className="text-sm text-red-700">
-                    <p>Days overdue: {selectedBorrowing.daysOverdue}</p>
+                    <p>Days overdue: {internalSelectedBorrowing.daysOverdue}</p>
                     <p>Rate: $0.50 per day</p>
                     <p className="font-medium text-base mt-2">
                       Total estimated fee: ${estimatedLateFee.toFixed(2)}
@@ -352,11 +501,14 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
             </Button>
             
             <div className="flex gap-2">
-              {step === 'confirm-return' && (
+              {((step !== 'select-member' && canSelectOtherMembers) || (step !== 'select-borrowing' && !canSelectOtherMembers)) && (
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setStep('select-borrowing')}
+                  onClick={() => {
+                    if (step === 'confirm-return') setStep('select-borrowing');
+                    else if (step === 'select-borrowing' && canSelectOtherMembers) setStep('select-member');
+                  }}
                   disabled={isLoading}
                 >
                   Back
@@ -366,15 +518,22 @@ export const ReturnBookForm: React.FC<ReturnBookFormProps> = ({
               {step === 'confirm-return' ? (
                 <Button
                   type="submit"
-                  disabled={isLoading || !selectedBorrowing}
+                  disabled={isLoading || !internalSelectedBorrowing}
                 >
                   {isLoading ? 'Processing...' : 'Confirm Return'}
                 </Button>
               ) : (
                 <Button
                   type="button"
-                  disabled={isLoading || !selectedBorrowing}
-                  onClick={() => setStep('confirm-return')}
+                  disabled={
+                    isLoading ||
+                    (step === 'select-member' && !internalSelectedMember) ||
+                    (step === 'select-borrowing' && !internalSelectedBorrowing)
+                  }
+                  onClick={() => {
+                    if (step === 'select-member') setStep('select-borrowing');
+                    else if (step === 'select-borrowing') setStep('confirm-return');
+                  }}
                 >
                   Next
                 </Button>

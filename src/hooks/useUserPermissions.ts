@@ -7,13 +7,15 @@ interface UserPermissions {
   canAdd: boolean;
   canViewBorrowing: boolean;
   canManageUsers: boolean;
+  canReturnBooks: boolean;
+  canViewAllBorrowings: boolean;
 }
 
 /**
  * Hook to get current user permissions based on their role from auth context
  */
 export const useUserPermissions = (): UserPermissions & { user: any } => {
-  const { user, isAuthenticated } = useAuth(); // Get user from actual auth context
+  const { user, isAuthenticated } = useAuth();
   
   console.log('useUserPermissions: Current user:', user?.email);
   console.log('useUserPermissions: User role:', user?.role);
@@ -29,6 +31,8 @@ export const useUserPermissions = (): UserPermissions & { user: any } => {
       canBorrow: false,
       canViewBorrowing: false,
       canManageUsers: false,
+      canReturnBooks: false,
+      canViewAllBorrowings: false,
       user: null
     };
   }
@@ -41,11 +45,13 @@ export const useUserPermissions = (): UserPermissions & { user: any } => {
     // Books permissions - Only ManagementStaff and Administrator can manage books
     canEdit: ['ManagementStaff', 'Administrator'].includes(userRole),
     canDelete: ['ManagementStaff', 'Administrator'].includes(userRole),
-    canAdd: ['ManagementStaff', 'Administrator'].includes(userRole), // Key permission for Add Book button
+    canAdd: ['ManagementStaff', 'Administrator'].includes(userRole),
     
-    // Borrowing permissions - All roles can borrow
+    // Borrowing permissions - All roles can borrow and return
     canBorrow: ['Member', 'MinorStaff', 'ManagementStaff', 'Administrator'].includes(userRole),
+    canReturnBooks: ['Member', 'MinorStaff', 'ManagementStaff', 'Administrator'].includes(userRole),
     canViewBorrowing: ['MinorStaff', 'ManagementStaff', 'Administrator'].includes(userRole),
+    canViewAllBorrowings: ['MinorStaff', 'ManagementStaff', 'Administrator'].includes(userRole),
     
     // User management permissions - Only Administrator
     canManageUsers: ['Administrator'].includes(userRole)
@@ -85,6 +91,10 @@ export const useCanAccess = () => {
         return true;
       }
       return user?.userId === targetMemberId;
+    },
+
+    canManageBorrowing: () => {
+      return ['ManagementStaff', 'Administrator'].includes(user?.role || '');
     }
   };
 };

@@ -90,40 +90,27 @@ const menuItems: MenuItem[] = [
       }
     ]
   },
+  
   {
     id: 'borrowing',
     label: 'Borrowing',
     icon: <RotateCcw className="w-5 h-5 flex-shrink-0 text-black" />,
     path: '/borrowing',
-    implemented: false,
+    implemented: true,
     children: [
-      { 
-        id: 'active-loans', 
-        label: 'Active Loans', 
-        icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, 
-        path: '/borrowing/active',
-        implemented: false
-      },
       { 
         id: 'borrow-book', 
         label: 'Borrow Book', 
-        icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, 
+        icon: <BookOpen className="w-4 h-4 flex-shrink-0 text-black" />, 
         path: '/borrowing/borrow',
-        implemented: false
+        implemented: true
       },
       { 
         id: 'return-book', 
         label: 'Return Book', 
         icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, 
         path: '/borrowing/return',
-        implemented: false
-      },
-      { 
-        id: 'history', 
-        label: 'History', 
-        icon: <RotateCcw className="w-4 h-4 flex-shrink-0 text-black" />, 
-        path: '/borrowing/history',
-        implemented: false
+        implemented: true
       }
     ]
   },
@@ -198,7 +185,7 @@ export function Sidebar({
   }
 
   const getFeaturePhase = (path: string): string => {
-    if (path.startsWith('/borrowing')) return 'Phase 6'
+    if (path.startsWith('/borrowing')) return 'Phase 6' // ← This can be removed since borrowing is now implemented
     if (path.startsWith('/analytics')) return 'Phase 8'
     if (path.startsWith('/admin')) return 'Phase 7'
     return 'a future update'

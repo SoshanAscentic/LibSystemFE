@@ -1,7 +1,7 @@
 import { ControllerResult } from '../../shared/interfaces/common';
 import { INavigationService, INotificationService } from '../../shared/interfaces/services';
-import { BorrowingRecord, MemberBorrowingStatus, BorrowingStatistics } from '../../domain/entities/BorrowingRecord';
-import { BorrowBookDto, ReturnBookDto, BorrowingFilters, BorrowingSorting, BorrowingPagination } from '../../domain/dtos/BorrowingDto';
+import { BorrowingRecord, MemberBorrowingStatus } from '../../domain/entities/BorrowingRecord';
+import { BorrowBookDto, ReturnBookDto } from '../../domain/dtos/BorrowingDto';
 import { BorrowingService } from '../../domain/services/BorrowingService';
 
 export class BorrowingController {
@@ -91,91 +91,30 @@ export class BorrowingController {
     }
   }
 
-  async handleGetAllBorrowings(
-    filters?: BorrowingFilters,
-    sorting?: BorrowingSorting,
-    pagination?: BorrowingPagination
-  ): Promise<{ borrowings: BorrowingRecord[]; success: boolean; error?: string }> {
-    try {
-      const result = await this.borrowingService.getAllBorrowings(filters, sorting, pagination);
-
-      if (result.isSuccess) {
-        return {
-          borrowings: result.value,
-          success: true
-        };
-      } else {
-        this.notificationService.showError(
-          'Failed to load borrowing records',
-          result.error.message
-        );
-        return {
-          borrowings: [],
-          success: false,
-          error: result.error.message
-        };
-      }
-    } catch (error: any) {
-      const errorMessage = 'An unexpected error occurred while loading borrowing records.';
-      this.notificationService.showError(
-        'Failed to load borrowing records',
-        errorMessage
-      );
-      
-      return {
-        borrowings: [],
-        success: false,
-        error: errorMessage
-      };
-    }
-  }
-
-  async handleGetBorrowingById(id: number): Promise<{ borrowing: BorrowingRecord | null; success: boolean; error?: string }> {
-    try {
-      const result = await this.borrowingService.getBorrowingById(id);
-
-      if (result.isSuccess) {
-        return {
-          borrowing: result.value,
-          success: true
-        };
-      } else {
-        this.notificationService.showError(
-          'Failed to load borrowing record',
-          result.error.message
-        );
-        return {
-          borrowing: null,
-          success: false,
-          error: result.error.message
-        };
-      }
-    } catch (error: any) {
-      const errorMessage = 'An unexpected error occurred while loading the borrowing record.';
-      this.notificationService.showError(
-        'Failed to load borrowing record',
-        errorMessage
-      );
-      
-      return {
-        borrowing: null,
-        success: false,
-        error: errorMessage
-      };
-    }
-  }
-
   async handleGetMemberBorrowingStatus(memberId: number): Promise<{ status: MemberBorrowingStatus | null; success: boolean; error?: string }> {
     try {
+      console.log('BorrowingController: Getting member borrowing status for member:', memberId);
+      
       const result = await this.borrowingService.getMemberBorrowingStatus(memberId);
+      
+      console.log('BorrowingController: Service result:', result);
 
       if (result.isSuccess) {
+        console.log('BorrowingController: Successfully retrieved member status');
+        console.log('BorrowingController: Current borrowings:', result.value.currentBorrowings?.length || 0);
+        console.log('BorrowingController: Member details:', {
+          memberId: result.value.memberId,
+          memberName: result.value.memberName,
+          borrowedBooksCount: result.value.borrowedBooksCount,
+          canBorrowBooks: result.value.canBorrowBooks
+        });
+        
         return {
           status: result.value,
           success: true
         };
       } else {
-        // Don't show error notification for this - it might be called frequently
+        console.error('BorrowingController: Service returned failure:', result.error);
         return {
           status: null,
           success: false,
@@ -183,6 +122,7 @@ export class BorrowingController {
         };
       }
     } catch (error: any) {
+      console.error('BorrowingController: Unexpected error in handleGetMemberBorrowingStatus:', error);
       return {
         status: null,
         success: false,
@@ -191,96 +131,7 @@ export class BorrowingController {
     }
   }
 
-  async handleGetBookBorrowingHistory(bookId: number): Promise<{ history: BorrowingRecord[]; success: boolean; error?: string }> {
-    try {
-      const result = await this.borrowingService.getBookBorrowingHistory(bookId);
-
-      if (result.isSuccess) {
-        return {
-          history: result.value,
-          success: true
-        };
-      } else {
-        return {
-          history: [],
-          success: false,
-          error: result.error.message
-        };
-      }
-    } catch (error: any) {
-      return {
-        history: [],
-        success: false,
-        error: 'An unexpected error occurred while loading book borrowing history.'
-      };
-    }
-  }
-
-  async handleGetOverdueRecords(): Promise<{ overdue: BorrowingRecord[]; success: boolean; error?: string }> {
-    try {
-      const result = await this.borrowingService.getOverdueRecords();
-
-      if (result.isSuccess) {
-        return {
-          overdue: result.value,
-          success: true
-        };
-      } else {
-        this.notificationService.showError(
-          'Failed to load overdue records',
-          result.error.message
-        );
-        return {
-          overdue: [],
-          success: false,
-          error: result.error.message
-        };
-      }
-    } catch (error: any) {
-      const errorMessage = 'An unexpected error occurred while loading overdue records.';
-      this.notificationService.showError(
-        'Failed to load overdue records',
-        errorMessage
-      );
-      
-      return {
-        overdue: [],
-        success: false,
-        error: errorMessage
-      };
-    }
-  }
-
-  async handleGetBorrowingStatistics(): Promise<{ statistics: BorrowingStatistics | null; success: boolean; error?: string }> {
-    try {
-      const result = await this.borrowingService.getBorrowingStatistics();
-
-      if (result.isSuccess) {
-        return {
-          statistics: result.value,
-          success: true
-        };
-      } else {
-        return {
-          statistics: null,
-          success: false,
-          error: result.error.message
-        };
-      }
-    } catch (error: any) {
-      return {
-        statistics: null,
-        success: false,
-        error: 'An unexpected error occurred while loading borrowing statistics.'
-      };
-    }
-  }
-
-  // Navigation helpers
-  handleNavigateToBorrowings(): void {
-    this.navigationService.navigateToBorrowings();
-  }
-
+  // Navigation helpers - updated to remove dashboard
   handleNavigateToBorrowBook(): void {
     this.navigationService.navigateToBorrowBook();
   }

@@ -14,6 +14,7 @@ import { SearchBar } from '../../molecules/SearchBar';
 import { LoadingState } from '../../molecules/LoadingState';
 import { BookOpen, User, Calendar, Search, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface BorrowBookFormData {
   bookId: string;
@@ -59,9 +60,18 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
   memberBorrowingStatus,
   className
 }) => {
+  const { user } = useAuth();
   const [bookSearchQuery, setBookSearchQuery] = useState('');
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
   const [step, setStep] = useState<'select-member' | 'select-book' | 'confirm'>('select-member');
+  const [internalSelectedMember, setInternalSelectedMember] = useState<Member | null>(null);
+  const [internalSelectedBook, setInternalSelectedBook] = useState<Book | null>(null);
+
+  // Check if user can select other members
+  const canSelectOtherMembers = user?.role === 'ManagementStaff' || user?.role === 'Administrator';
+
+  // Find current user as member
+  const currentUserAsMember = activeMembers.find(member => member.email === user?.email);
 
   const {
     register,
@@ -78,31 +88,43 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
 
   const watchedValues = watch();
 
+  // Initialize step based on user permissions
+  useEffect(() => {
+    if (!canSelectOtherMembers && currentUserAsMember) {
+      // Skip member selection for regular members
+      setInternalSelectedMember(currentUserAsMember);
+      setValue('memberId', currentUserAsMember.memberId.toString());
+      setStep('select-book');
+    } else {
+      setStep('select-member');
+    }
+  }, [canSelectOtherMembers, currentUserAsMember, setValue]);
+
   // Auto-advance steps
   useEffect(() => {
-    if (step === 'select-member' && selectedMember && watchedValues.memberId) {
+    if (step === 'select-member' && internalSelectedMember && watchedValues.memberId) {
       setStep('select-book');
     }
-  }, [selectedMember, watchedValues.memberId, step]);
+  }, [internalSelectedMember, watchedValues.memberId, step]);
 
   useEffect(() => {
-    if (step === 'select-book' && selectedBook && watchedValues.bookId) {
+    if (step === 'select-book' && internalSelectedBook && watchedValues.bookId) {
       setStep('confirm');
     }
-  }, [selectedBook, watchedValues.bookId, step]);
+  }, [internalSelectedBook, watchedValues.bookId, step]);
 
   // Set form values when selections change
   useEffect(() => {
-    if (selectedMember) {
-      setValue('memberId', selectedMember.memberId.toString());
+    if (internalSelectedMember) {
+      setValue('memberId', internalSelectedMember.memberId.toString());
     }
-  }, [selectedMember, setValue]);
+  }, [internalSelectedMember, setValue]);
 
   useEffect(() => {
-    if (selectedBook) {
-      setValue('bookId', selectedBook.bookId.toString());
+    if (internalSelectedBook) {
+      setValue('bookId', internalSelectedBook.bookId.toString());
     }
-  }, [selectedBook, setValue]);
+  }, [internalSelectedBook, setValue]);
 
   const handleFormSubmit = async (data: BorrowBookFormData) => {
     const borrowData: BorrowBookDto = {
@@ -116,9 +138,28 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
 
   const handleReset = () => {
     reset();
-    setStep('select-member');
+    setInternalSelectedMember(null);
+    setInternalSelectedBook(null);
     setBookSearchQuery('');
     setMemberSearchQuery('');
+    
+    if (!canSelectOtherMembers && currentUserAsMember) {
+      setInternalSelectedMember(currentUserAsMember);
+      setValue('memberId', currentUserAsMember.memberId.toString());
+      setStep('select-book');
+    } else {
+      setStep('select-member');
+    }
+  };
+
+  const handleMemberSelect = (member: Member) => {
+    setInternalSelectedMember(member);
+    setValue('memberId', member.memberId.toString());
+  };
+
+  const handleBookSelect = (book: Book) => {
+    setInternalSelectedBook(book);
+    setValue('bookId', book.bookId.toString());
   };
 
   const filteredBooks = availableBooks.filter(book =>
@@ -134,7 +175,7 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
   );
 
   const canProceed = () => {
-    if (!selectedMember || !selectedBook) return false;
+    if (!internalSelectedMember || !internalSelectedBook) return false;
     if (memberBorrowingStatus && !memberBorrowingStatus.canBorrowMoreBooks) return false;
     return true;
   };
@@ -149,38 +190,40 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
         
         {/* Progress Steps */}
         <div className="flex items-center gap-4 mt-4">
-          <div className={cn(
-            "flex items-center gap-2 px-3 py-1 rounded-full text-sm",
-            step === 'select-member' ? "bg-blue-100 text-blue-800" : 
-            selectedMember ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
-          )}>
-            <User className="w-4 h-4" />
-            1. Select Member
-            {selectedMember && <CheckCircle className="w-4 h-4" />}
-          </div>
+          {canSelectOtherMembers && (
+            <div className={cn(
+              "flex items-center gap-2 px-3 py-1 rounded-full text-sm",
+              step === 'select-member' ? "bg-blue-100 text-blue-800" : 
+              internalSelectedMember ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+            )}>
+              <User className="w-4 h-4" />
+              1. Select Member
+              {internalSelectedMember && <CheckCircle className="w-4 h-4" />}
+            </div>
+          )}
           <div className={cn(
             "flex items-center gap-2 px-3 py-1 rounded-full text-sm",
             step === 'select-book' ? "bg-blue-100 text-blue-800" : 
-            selectedBook ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+            internalSelectedBook ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
           )}>
             <BookOpen className="w-4 h-4" />
-            2. Select Book
-            {selectedBook && <CheckCircle className="w-4 h-4" />}
+            {canSelectOtherMembers ? '2.' : '1.'} Select Book
+            {internalSelectedBook && <CheckCircle className="w-4 h-4" />}
           </div>
           <div className={cn(
             "flex items-center gap-2 px-3 py-1 rounded-full text-sm",
             step === 'confirm' ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600"
           )}>
             <Clock className="w-4 h-4" />
-            3. Confirm Details
+            {canSelectOtherMembers ? '3.' : '2.'} Confirm Details
           </div>
         </div>
       </CardHeader>
 
       <CardContent>
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-          {/* Step 1: Select Member */}
-          {step === 'select-member' && (
+          {/* Step 1: Select Member (only for staff) */}
+          {step === 'select-member' && canSelectOtherMembers && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Select Member</h3>
@@ -205,11 +248,11 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
                       key={member.memberId}
                       className={cn(
                         "p-4 border rounded-lg cursor-pointer transition-colors",
-                        selectedMember?.memberId === member.memberId
+                        internalSelectedMember?.memberId === member.memberId
                           ? "border-blue-500 bg-blue-50"
                           : "border-gray-200 hover:border-gray-300"
                       )}
-                      onClick={() => setValue('memberId', member.memberId.toString())}
+                      onClick={() => handleMemberSelect(member)}
                     >
                       <div className="flex items-start justify-between">
                         <div>
@@ -244,17 +287,19 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Select Book</h3>
-                <Button variant="outline" size="sm" onClick={() => setStep('select-member')}>
-                  Change Member
-                </Button>
+                {canSelectOtherMembers && (
+                  <Button variant="outline" size="sm" onClick={() => setStep('select-member')}>
+                    Change Member
+                  </Button>
+                )}
               </div>
 
               {/* Selected Member Info */}
-              {selectedMember && (
+              {internalSelectedMember && (
                 <Alert>
                   <User className="w-4 h-4" />
                   <AlertDescription>
-                    Selected Member: <strong>{selectedMember.fullName}</strong> ({selectedMember.email})
+                    {canSelectOtherMembers ? 'Selected Member' : 'Borrowing for'}: <strong>{internalSelectedMember.fullName}</strong> ({internalSelectedMember.email})
                   </AlertDescription>
                 </Alert>
               )}
@@ -307,13 +352,13 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
                       key={book.bookId}
                       className={cn(
                         "p-4 border rounded-lg cursor-pointer transition-colors",
-                        selectedBook?.bookId === book.bookId
+                        internalSelectedBook?.bookId === book.bookId
                           ? "border-blue-500 bg-blue-50"
                           : book.isAvailable 
                             ? "border-gray-200 hover:border-gray-300"
                             : "border-gray-200 bg-gray-50 cursor-not-allowed"
                       )}
-                      onClick={() => book.isAvailable && setValue('bookId', book.bookId.toString())}
+                      onClick={() => book.isAvailable && handleBookSelect(book)}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -356,7 +401,7 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
               {/* Summary */}
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Member Summary */}
-                {selectedMember && (
+                {internalSelectedMember && (
                   <Card>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base flex items-center gap-2">
@@ -365,15 +410,15 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      <p className="font-medium">{selectedMember.fullName}</p>
-                      <p className="text-sm text-gray-600">{selectedMember.email}</p>
-                      <p className="text-xs text-gray-500">{selectedMember.memberType}</p>
+                      <p className="font-medium">{internalSelectedMember.fullName}</p>
+                      <p className="text-sm text-gray-600">{internalSelectedMember.email}</p>
+                      <p className="text-xs text-gray-500">{internalSelectedMember.memberType}</p>
                     </CardContent>
                   </Card>
                 )}
 
                 {/* Book Summary */}
-                {selectedBook && (
+                {internalSelectedBook && (
                   <Card>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base flex items-center gap-2">
@@ -382,10 +427,10 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      <p className="font-medium">{selectedBook.title}</p>
-                      <p className="text-sm text-gray-600">by {selectedBook.author}</p>
+                      <p className="font-medium">{internalSelectedBook.title}</p>
+                      <p className="text-sm text-gray-600">by {internalSelectedBook.author}</p>
                       <p className="text-xs text-gray-500">
-                        {selectedBook.category} • {selectedBook.publicationYear}
+                        {internalSelectedBook.category} • {internalSelectedBook.publicationYear}
                       </p>
                     </CardContent>
                   </Card>
@@ -448,13 +493,13 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
             </Button>
             
             <div className="flex gap-2">
-              {step !== 'select-member' && (
+              {((step !== 'select-member' && canSelectOtherMembers) || (step !== 'select-book' && !canSelectOtherMembers)) && (
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => {
                     if (step === 'confirm') setStep('select-book');
-                    else if (step === 'select-book') setStep('select-member');
+                    else if (step === 'select-book' && canSelectOtherMembers) setStep('select-member');
                   }}
                   disabled={isLoading}
                 >
@@ -474,8 +519,8 @@ export const BorrowBookForm: React.FC<BorrowBookFormProps> = ({
                   type="button"
                   disabled={
                     isLoading ||
-                    (step === 'select-member' && !selectedMember) ||
-                    (step === 'select-book' && !selectedBook)
+                    (step === 'select-member' && !internalSelectedMember) ||
+                    (step === 'select-book' && !internalSelectedBook)
                   }
                   onClick={() => {
                     if (step === 'select-member') setStep('select-book');

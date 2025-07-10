@@ -1,13 +1,21 @@
-import { useControllerFactory } from '../../../hooks/useControllerFactory';
+import { useMemo } from 'react';
+import { useContainer } from '../../../shared/hooks/useContainer';
+import { SERVICE_KEYS } from '../../../shared/container/ServiceKeys';
 import { BooksController } from '../../../application/controllers/BooksController';
 
 export const useBooksController = (): BooksController => {
-  const factory = useControllerFactory();
+  const container = useContainer();
   
-  try {
-    return factory.createBooksController();
-  } catch (error) {
-    console.error('Failed to create BooksController:', error);
-    throw new Error(`Failed to create BooksController: ${error}`);
-  }
+  // Memoize the controller to prevent re-creation
+  const controller = useMemo(() => {
+    try {
+      console.log('useBooksController: Resolving BooksController');
+      return container.resolve<BooksController>(SERVICE_KEYS.BOOKS_CONTROLLER);
+    } catch (error) {
+      console.error('Failed to resolve BooksController:', error);
+      throw new Error(`Failed to resolve BooksController: ${error}`);
+    }
+  }, [container]);
+
+  return controller;
 };

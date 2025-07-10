@@ -1,13 +1,21 @@
-import { useControllerFactory } from '../../../hooks/useControllerFactory';
+import { useMemo } from 'react';
+import { useContainer } from '../../../shared/hooks/useContainer';
+import { SERVICE_KEYS } from '../../../shared/container/ServiceKeys';
 import { MembersController } from '../../../application/controllers/MemberController';
 
 export const useMembersController = (): MembersController => {
-  const factory = useControllerFactory();
+  const container = useContainer();
   
-  try {
-    return factory.createMembersController();
-  } catch (error) {
-    console.error('Failed to create MembersController:', error);
-    throw new Error(`Failed to create MembersController: ${error}`);
-  }
+  // Memoize the controller to prevent re-creation
+  const controller = useMemo(() => {
+    try {
+      console.log('useMembersController: Resolving MembersController');
+      return container.resolve<MembersController>(SERVICE_KEYS.MEMBERS_CONTROLLER);
+    } catch (error) {
+      console.error('Failed to resolve MembersController:', error);
+      throw new Error(`Failed to resolve MembersController: ${error}`);
+    }
+  }, [container]);
+
+  return controller;
 };
