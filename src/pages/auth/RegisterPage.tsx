@@ -1,46 +1,31 @@
 import * as React from "react"
 import { AuthLayout } from "@/components/templates/AuthLayout"
 import { RegisterForm, type RegisterFormData } from "@/components/organisms/RegisterForm"
-import { toast } from "sonner"
+import { useAuth } from "../../contexts/AuthContext"
+import { Navigate, useLocation } from "react-router-dom"
 
 export interface RegisterPageProps {
-  onRegister?: (data: RegisterFormData) => void
-  onNavigateToLogin?: () => void
+  onNavigateToLogin?: () => void;
 }
 
-export function RegisterPage({ onRegister, onNavigateToLogin }: RegisterPageProps) {
-  const [isLoading, setIsLoading] = React.useState(false)
+export function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
+  const { register, isLoading, isAuthenticated, clearError } = useAuth();
+  const location = useLocation();
+
+  // Redirect if already authenticated
+  if (isAuthenticated) {
+    const from = (location.state as any)?.from?.pathname || '/dashboard';
+    return <Navigate to={from} replace />;
+  }
 
   const handleRegister = async (data: RegisterFormData) => {
-    setIsLoading(true)
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      toast.success("Account created successfully!", {
-        description: "Welcome to LibraryMS. You can now sign in with your credentials."
-      })
-      
-      onRegister?.(data)
-      
-      // Auto-redirect to login after successful registration
-      setTimeout(() => {
-        onNavigateToLogin?.()
-      }, 1500)
-      
-    } catch (error) {
-      toast.error("Registration failed", {
-        description: "An unexpected error occurred. Please try again."
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    clearError();
+    await register(data);
+  };
 
   const handleLogin = () => {
-    onNavigateToLogin?.()
-  }
+    onNavigateToLogin?.();
+  };
 
   return (
     <AuthLayout
@@ -53,5 +38,5 @@ export function RegisterPage({ onRegister, onNavigateToLogin }: RegisterPageProp
         isLoading={isLoading}
       />
     </AuthLayout>
-  )
+  );
 }

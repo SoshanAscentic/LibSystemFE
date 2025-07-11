@@ -92,38 +92,7 @@ export function Header({
         </div>
       </div>
 
-      {/* Center Section - Desktop Search */}
-      {!showMobileSearch && (
-        <div className="flex-1 max-w-md mx-4 sm:mx-8 hidden md:block">
-          <SearchBar
-            value={searchQuery}
-            onChange={handleSearch}
-            placeholder="Search books, members, or records..."
-            className="w-full"
-          />
-        </div>
-      )}
-
-      {/* Mobile Search Overlay */}
-      {showMobileSearch && (
-        <div className="absolute top-0 left-0 right-0 bg-white border-b border-[var(--color-gray-200)] p-4 md:hidden z-10">
-          <div className="flex items-center gap-3">
-            <SearchBar
-              value={searchQuery}
-              onChange={handleSearch}
-              placeholder="Search books, members..."
-              className="flex-1"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowMobileSearch(false)}
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-      )}
+      
 
       {/* Right Section */}
       <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
