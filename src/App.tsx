@@ -10,9 +10,9 @@ import { getContainer } from './shared/container/containerSetup';
 import { configureDependencies } from './infrastructure/container/DependencyConfiguration';
 import { SERVICE_KEYS } from './shared/container/ServiceKeys';
 
-// SECURE Authentication
+// Authentication
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { SecureProtectedRoute } from './components/SecureProtectedRoute'; // CHANGED
+import { ProtectedRoute } from './components/ProtectedRoute'; // CHANGED: Use simple ProtectedRoute
 
 // Layout Components
 import { DashboardLayout } from './components/templates/DashboardLayout';
@@ -24,28 +24,26 @@ import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 
-// Books Page Containers
+// Page Containers
 import { BooksPageContainer } from './presentation/components/Book/BooksPageContainer';
 import { BookDetailsPageContainer } from './presentation/components/Book/BookDetailsPageContainer';
 import { CreateBookPageContainer } from './presentation/components/Book/CreateBookPageContainer';
-
-// Members Page Containers
 import { MembersPageContainer } from './presentation/components/Member/MembersPageContainer';
 import { MemberDetailsPageContainer } from './presentation/components/Member/MemberDetailsPageContainer';
 import { CreateMemberPageContainer } from './presentation/components/Member/CreateMemberPageContainer';
-
-// Borrowing Page Containers
 import { BorrowBookPageContainer } from './presentation/components/Borrow/BorrowBookPageContainer';
 import { ReturnBookPageContainer } from './presentation/components/Borrow/ReturnBookPageContainer';
 
-// Loading Component
-import { LoadingState } from './components/molecules/LoadingState';
+// Debug Component and Utils  
+import { AuthDebugger } from './components/AuthDebugger';
+import './utils/authDebugUtils';
+import { LoadingState } from './components/molecules';
 
 // Create React Query client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 5 * 60 * 1000,
       retry: 1,
       refetchOnWindowFocus: false,
     },
@@ -64,9 +62,9 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     try {
-      console.log('App: Starting secure logout...');
+      console.log('App: Starting logout...');
       await logout();
-      console.log('App: Secure logout completed, redirecting to login');
+      console.log('App: Logout completed, redirecting to login');
       navigate('/login');
     } catch (error) {
       console.error('App: Logout error:', error);
@@ -89,7 +87,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleSearch = (query: string) => {
     console.log('Search:', query);
-    // TODO: Implement global search functionality if needed
   };
 
   if (isLoading) {
@@ -115,7 +112,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           onToggleSidebar={handleSidebarToggle}
           isSidebarOpen={isSidebarOpen}
           onLogout={handleLogout}
-          notifications={0} // TODO: Implement real notifications
+          notifications={0}
         />
       }
       sidebar={
@@ -138,7 +135,7 @@ function AuthenticatedApp() {
   const { isAuthenticated, isInitialized, user } = useAuth();
 
   if (!isInitialized) {
-    return <LoadingState message="Initializing secure authentication..." />;
+    return <LoadingState message="Initializing authentication..." />;
   }
 
   return (
@@ -166,11 +163,11 @@ function AuthenticatedApp() {
         } 
       />
 
-      {/* SECURE Protected Routes */}
+      {/* Protected Routes */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       
       <Route path="/dashboard" element={
-        <SecureProtectedRoute>
+        <ProtectedRoute>
           <AppLayout>
             <DashboardPage 
               user={user ? {
@@ -180,79 +177,79 @@ function AuthenticatedApp() {
               } : undefined}
             />
           </AppLayout>
-        </SecureProtectedRoute>
+        </ProtectedRoute>
       } />
 
-      {/* SECURE Books Routes - Server-verified permissions */}
+      {/* Books Routes - All authenticated users can view books */}
       <Route path="/books" element={
-        <SecureProtectedRoute resource="books" action="read">
+        <ProtectedRoute>
           <AppLayout>
             <BooksPageContainer />
           </AppLayout>
-        </SecureProtectedRoute>
+        </ProtectedRoute>
       } />
 
       <Route path="/books/add" element={
-        <SecureProtectedRoute resource="books" action="create">
+        <ProtectedRoute roles={['ManagementStaff', 'Administrator']}>
           <AppLayout>
             <CreateBookPageContainer />
           </AppLayout>
-        </SecureProtectedRoute>
+        </ProtectedRoute>
       } />
 
       <Route path="/books/:id" element={
-        <SecureProtectedRoute resource="books" action="read">
+        <ProtectedRoute>
           <AppLayout>
             <BookDetailsPageContainer />
           </AppLayout>
-        </SecureProtectedRoute>
+        </ProtectedRoute>
       } />
 
-      {/* SECURE Members Routes - Server-verified permissions */}
+      {/* Members Routes - Staff and above can view members */}
       <Route path="/members" element={
-        <SecureProtectedRoute resource="members" action="read">
+        <ProtectedRoute roles={['MinorStaff', 'ManagementStaff', 'Administrator']}>
           <AppLayout>
             <MembersPageContainer />
           </AppLayout>
-        </SecureProtectedRoute>
+        </ProtectedRoute>
       } />
 
       <Route path="/members/add" element={
-        <SecureProtectedRoute resource="members" action="create">
+        <ProtectedRoute roles={['Administrator']}>
           <AppLayout>
             <CreateMemberPageContainer />
           </AppLayout>
-        </SecureProtectedRoute>
+        </ProtectedRoute>
       } />
 
       <Route path="/members/:id" element={
-        <SecureProtectedRoute resource="members" action="read">
+        <ProtectedRoute roles={['MinorStaff', 'ManagementStaff', 'Administrator']}>
           <AppLayout>
             <MemberDetailsPageContainer />
           </AppLayout>
-        </SecureProtectedRoute>
+        </ProtectedRoute>
       } />
 
-      {/* SECURE Borrowing Routes */}
+      {/* Borrowing Routes - All authenticated users */}
       <Route path="/borrowing" element={<Navigate to="/borrowing/borrow" replace />} />
 
       <Route path="/borrowing/borrow" element={
-        <SecureProtectedRoute resource="borrowing" action="create">
+        <ProtectedRoute>
           <AppLayout>
             <BorrowBookPageContainer />
           </AppLayout>
-        </SecureProtectedRoute>
+        </ProtectedRoute>
       } />
 
       <Route path="/borrowing/return" element={
-        <SecureProtectedRoute resource="borrowing" action="create">
+        <ProtectedRoute>
           <AppLayout>
             <ReturnBookPageContainer />
           </AppLayout>
-        </SecureProtectedRoute>
+        </ProtectedRoute>
       } />
 
-      {/* Catch all - redirect to dashboard if authenticated, login if not */}
+      {/* Catch all */}
       <Route path="*" element={
         isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
       } />
@@ -298,9 +295,9 @@ function AppWithContainer() {
     }
 
     try {
-      console.log('Resolving SECURE AuthenticationService...');
+      console.log('Resolving AuthenticationService...');
       const service = container.resolve(SERVICE_KEYS.AUTHENTICATION_SERVICE);
-      console.log('SECURE AuthenticationService resolved successfully');
+      console.log('AuthenticationService resolved successfully');
       return service;
     } catch (error: any) {
       console.error('Failed to resolve AuthenticationService:', error);
@@ -323,8 +320,8 @@ function AppWithContainer() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Initializing Secure Application</h2>
-          <p className="text-gray-600">Setting up secure services...</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Initializing Application</h2>
+          <p className="text-gray-600">Setting up services...</p>
         </div>
       </div>
     );
@@ -336,8 +333,8 @@ function AppWithContainer() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            <h2 className="text-xl font-bold mb-2">Secure Application Error</h2>
-            <p className="text-sm">{configError || 'Failed to initialize secure authentication service'}</p>
+            <h2 className="text-xl font-bold mb-2">Application Error</h2>
+            <p className="text-sm">{configError || 'Failed to initialize authentication service'}</p>
           </div>
           <button 
             onClick={() => window.location.reload()}
@@ -366,6 +363,7 @@ function App() {
       <Router>
         <div className="min-h-screen bg-gray-50">
           <AppWithContainer />
+          
           <Toaster 
             position="top-right" 
             richColors 

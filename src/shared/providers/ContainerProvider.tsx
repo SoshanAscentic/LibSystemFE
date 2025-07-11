@@ -1,6 +1,6 @@
 import React from 'react';
-import { ContainerContext } from '../hooks/useContainer';
 import { Container } from '../container/Container';
+import { ContainerContext } from '../hooks/useContainer';
 
 interface ContainerProviderProps {
   container: Container;

@@ -119,135 +119,182 @@ export class MembersApiService {
   }
 
   /**
-   * Map backend response to domain Member entity - FIXED for role mapping and date parsing
-   */
-  private mapBackendResponseToMember(backendData: BackendMemberResponse): Member {
-    try {
-      if (!backendData) {
-        throw new Error('Backend member data is null or undefined');
-      }
+ * Map backend response to domain Member entity - FIXED for memberType number handling
+ */
+private mapBackendResponseToMember(backendData: BackendMemberResponse): Member {
+  try {
+    if (!backendData) {
+      throw new Error('Backend member data is null or undefined');
+    }
 
-      console.log('MembersApiService: Mapping backend data:', backendData);
+    console.log('MembersApiService: Mapping backend data:', backendData);
+    console.log('MembersApiService: memberType type:', typeof backendData.memberType, 'value:', backendData.memberType);
 
-      // Parse the single "name" field into firstName and lastName
-      const fullName = backendData.name || '';
-      const nameParts = fullName.trim().split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+    // Parse the single "name" field into firstName and lastName
+    const fullName = backendData.name || '';
+    const nameParts = fullName.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-      // FIXED: Better role mapping - prioritize explicit role field, then memberType
-      const role = this.mapRoleFromString(backendData.role || backendData.memberType);
-      const memberType = this.mapMemberTypeFromString(backendData.memberType);
+    // FIXED: Handle memberType as either number or string
+    let memberTypeString: string;
+    let roleString: string;
 
-      // FIXED: Better registration date parsing with validation
-      let registrationDate: Date;
-      if (backendData.registrationDate) {
-        try {
-          // Try to parse the date string
-          const parsedDate = new Date(backendData.registrationDate);
-          
-          // Validate the parsed date
-          if (isNaN(parsedDate.getTime())) {
-            console.warn('MembersApiService: Invalid registration date format:', backendData.registrationDate);
-            registrationDate = new Date(); // Fallback to current date
-          } else {
-            registrationDate = parsedDate;
-          }
-        } catch (error) {
-          console.warn('MembersApiService: Error parsing registration date:', error);
-          registrationDate = new Date(); // Fallback to current date
-        }
+    // Convert memberType number to string if needed
+    if (typeof backendData.memberType === 'number') {
+      console.log('MembersApiService: Converting memberType number to string:', backendData.memberType);
+      memberTypeString = this.getMemberTypeFromNumber(backendData.memberType);
+    } else {
+      memberTypeString = backendData.memberType || 'RegularMember';
+    }
+
+    // Handle role field - prioritize explicit role, then use converted memberType
+    if (backendData.role) {
+      if (typeof backendData.role === 'number') {
+        roleString = this.getMemberTypeFromNumber(backendData.role);
       } else {
-        console.warn('MembersApiService: No registration date provided');
-        registrationDate = new Date(); // Fallback to current date
+        roleString = backendData.role;
       }
-
-      const member: Member = {
-        memberId: backendData.memberID || 0,  // Note: backend uses "memberID"
-        firstName: firstName,
-        lastName: lastName,
-        fullName: fullName,
-        email: backendData.email || '',
-        memberType: memberType,
-        role: role,
-        isActive: backendData.isActive !== false,
-        registrationDate: registrationDate,
-        borrowedBooksCount: backendData.borrowedBooksCount || 0,
-        canBorrowBooks: backendData.canBorrowBooks !== false,
-        canViewBooks: backendData.canViewBooks !== false,
-        canViewMembers: backendData.canViewMembers !== false,
-        canManageBooks: backendData.canManageBooks !== false,
-        currentLoans: backendData.currentLoans || [],
-        borrowingHistory: backendData.borrowingHistory || [],
-      };
-
-      console.log('MembersApiService: Mapped member:', {
-        memberId: member.memberId,
-        fullName: member.fullName,
-        role: member.role,
-        memberType: member.memberType,
-        registrationDate: member.registrationDate.toISOString(),
-        isValidDate: !isNaN(member.registrationDate.getTime())
-      });
-      
-      return member;
-    } catch (error) {
-      console.error('MembersApiService: Member mapping error:', error);
-      throw new Error(`Failed to map member: ${error}`);
+    } else {
+      roleString = memberTypeString;
     }
-  }
 
-  /**
-   * Map member type string to enum - FIXED to handle Administrator
-   */
-  private mapMemberTypeFromString(memberType: string): MemberType {
-    const normalizedType = memberType?.toLowerCase().replace(/\s+/g, '');
+    console.log('MembersApiService: Final strings - memberType:', memberTypeString, 'role:', roleString);
+
+    const role = this.mapRoleFromString(roleString);
+    const memberType = this.mapMemberTypeFromString(memberTypeString);
+
+    // FIXED: Better registration date parsing with validation
+    let registrationDate: Date;
+    if (backendData.registrationDate) {
+      try {
+        const parsedDate = new Date(backendData.registrationDate);
+        if (isNaN(parsedDate.getTime())) {
+          console.warn('MembersApiService: Invalid registration date format:', backendData.registrationDate);
+          registrationDate = new Date();
+        } else {
+          registrationDate = parsedDate;
+        }
+      } catch (error) {
+        console.warn('MembersApiService: Error parsing registration date:', error);
+        registrationDate = new Date();
+      }
+    } else {
+      console.warn('MembersApiService: No registration date provided');
+      registrationDate = new Date();
+    }
+
+    const member: Member = {
+      memberId: backendData.memberID || 0,
+      firstName: firstName,
+      lastName: lastName,
+      fullName: fullName,
+      email: backendData.email || '',
+      memberType: memberType,
+      role: role,
+      isActive: backendData.isActive !== false,
+      registrationDate: registrationDate,
+      borrowedBooksCount: backendData.borrowedBooksCount || 0,
+      canBorrowBooks: backendData.canBorrowBooks !== false,
+      canViewBooks: backendData.canViewBooks !== false,
+      canViewMembers: backendData.canViewMembers !== false,
+      canManageBooks: backendData.canManageBooks !== false,
+      currentLoans: backendData.currentLoans || [],
+      borrowingHistory: backendData.borrowingHistory || [],
+    };
+
+    console.log('MembersApiService: Mapped member with types:', {
+      memberId: member.memberId,
+      fullName: member.fullName,
+      role: member.role,
+      memberType: member.memberType,
+      registrationDate: member.registrationDate.toISOString(),
+    });
     
-    switch (normalizedType) {
-      case 'regularmember':
-      case 'regular_member':
-      case 'member':
-        return MemberType.REGULAR_MEMBER;
-      case 'minorstaff':
-      case 'minor_staff':
-        return MemberType.MINOR_STAFF;
-      case 'managementstaff':
-      case 'management_staff':
-        return MemberType.MANAGEMENT_STAFF;
-      case 'administrator':
-      case 'admin':
-        return MemberType.ADMINISTRATOR;
-      default:
-        console.warn('MembersApiService: Unknown member type:', memberType, 'normalized:', normalizedType);
-        return MemberType.REGULAR_MEMBER;
-    }
+    return member;
+  } catch (error) {
+    console.error('MembersApiService: Member mapping error:', error);
+    throw new Error(`Failed to map member: ${error}`);
+  }
+}
+
+/**
+ * NEW: Convert memberType number to string
+ */
+private getMemberTypeFromNumber(memberType: number): string {
+  const types = {
+    0: 'RegularMember',
+    1: 'MinorStaff', 
+    2: 'ManagementStaff',
+    3: 'Administrator'
+  };
+  const result = types[memberType as keyof typeof types] || 'RegularMember';
+  console.log('MembersApiService: getMemberTypeFromNumber:', memberType, '->', result);
+  return result;
+}
+
+/**
+ * UPDATED: Map member type string to enum with better error handling
+ */
+private mapMemberTypeFromString(memberType: string): MemberType {
+  if (!memberType) {
+    console.warn('MembersApiService: Empty memberType, defaulting to REGULAR_MEMBER');
+    return MemberType.REGULAR_MEMBER;
   }
 
-  /**
-   * Map role string to enum - FIXED to handle Administrator properly
-   */
-  private mapRoleFromString(role: string): UserRole {
-    const normalizedRole = role?.toLowerCase().replace(/\s+/g, '');
-    
-    switch (normalizedRole) {
-      case 'member':
-      case 'regularmember':
-        return UserRole.MEMBER;
-      case 'minorstaff':
-      case 'minor_staff':
-        return UserRole.MINOR_STAFF;
-      case 'managementstaff':
-      case 'management_staff':
-        return UserRole.MANAGEMENT_STAFF;
-      case 'administrator':
-      case 'admin':
-        return UserRole.ADMINISTRATOR;
-      default:
-        console.warn('MembersApiService: Unknown role:', role, 'normalized:', normalizedRole);
-        // Don't default to Member - try to infer from memberType or return what we have
-        return UserRole.MEMBER;
-    }
+  const normalizedType = memberType.toString().toLowerCase().replace(/\s+/g, '');
+  console.log('MembersApiService: mapMemberTypeFromString input:', memberType, 'normalized:', normalizedType);
+  
+  switch (normalizedType) {
+    case 'regularmember':
+    case 'regular_member':
+    case 'member':
+      return MemberType.REGULAR_MEMBER;
+    case 'minorstaff':
+    case 'minor_staff':
+      return MemberType.MINOR_STAFF;
+    case 'managementstaff':
+    case 'management_staff':
+      return MemberType.MANAGEMENT_STAFF;
+    case 'administrator':
+    case 'admin':
+      return MemberType.ADMINISTRATOR;
+    default:
+      console.warn('MembersApiService: Unknown member type:', memberType, 'normalized:', normalizedType, 'defaulting to REGULAR_MEMBER');
+      return MemberType.REGULAR_MEMBER;
   }
+}
+
+/**
+ * UPDATED: Map role string to enum with better error handling
+ */
+private mapRoleFromString(role: string): UserRole {
+  if (!role) {
+    console.warn('MembersApiService: Empty role, defaulting to MEMBER');
+    return UserRole.MEMBER;
+  }
+
+  const normalizedRole = role.toString().toLowerCase().replace(/\s+/g, '');
+  console.log('MembersApiService: mapRoleFromString input:', role, 'normalized:', normalizedRole);
+  
+  switch (normalizedRole) {
+    case 'member':
+    case 'regularmember':
+      return UserRole.MEMBER;
+    case 'minorstaff':
+    case 'minor_staff':
+      return UserRole.MINOR_STAFF;
+    case 'managementstaff':
+    case 'management_staff':
+      return UserRole.MANAGEMENT_STAFF;
+    case 'administrator':
+    case 'admin':
+      return UserRole.ADMINISTRATOR;
+    default:
+      console.warn('MembersApiService: Unknown role:', role, 'normalized:', normalizedRole, 'defaulting to MEMBER');
+      return UserRole.MEMBER;
+  }
+}
 
   /**
    * Handle API errors consistently

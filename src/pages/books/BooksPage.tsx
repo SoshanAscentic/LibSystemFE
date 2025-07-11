@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { ConfirmDialog } from '../../components/ui/confirm-dialog';
 import { Grid, List, Plus } from 'lucide-react';
 import { useBooks } from '../../presentation/hooks/Books/useBooks';
-import { useSecurePermissions, PermissionGate } from '../../hooks/useSecurePermissions'; // CHANGED
+import { useUserPermissions } from '../../hooks/useUserPermissions'; 
+import { PermissionGate } from '../../components/PermissionGate'; 
 import { bookToCreateBookDto } from '../../utils/bookUtils';
 
 type ViewMode = 'grid' | 'table';
@@ -34,11 +35,20 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
   const [modal, setModal] = useState<ModalState>({ type: null });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // SECURE Permissions - Server-verified
-  const permissions = useSecurePermissions(); // CHANGED
+  // Simplified Permissions
+  const permissions = useUserPermissions(); // CHANGED
 
   // Data hooks
   const { books, isLoading: booksLoading, refresh: refreshBooks } = useBooks(filters);
+
+  console.log('BooksPage: Current permissions:', {
+    canAdd: permissions.canAdd,
+    canEdit: permissions.canEdit,
+    canDelete: permissions.canDelete,
+    canBorrow: permissions.canBorrow,
+    userRole: permissions.user?.role,
+    isLoading: permissions.isLoading
+  });
 
   // Event Handlers
   const handleFiltersChange = (newFilters: Partial<BookFiltersType>) => {
@@ -58,7 +68,6 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
   };
 
   const handleBookAdd = () => {
-    // SECURITY: Double-check permission before allowing add (server already verified)
     if (!permissions.canAdd) {
       console.warn('User attempted to add book without permission');
       return;
@@ -67,7 +76,6 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
   };
 
   const handleBookBorrow = (book: Book) => {
-    // SECURITY: Check permission before allowing borrow
     if (!permissions.canBorrow) {
       console.warn('User attempted to borrow book without permission');
       return;
@@ -125,14 +133,14 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
     }
   };
 
-  // Show loading state if permissions are still being verified
+  // Show loading state if permissions are still being loaded
   if (permissions.isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Verifying Permissions</h2>
-          <p className="text-gray-600">Checking your access rights...</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading</h2>
+          <p className="text-gray-600">Setting up your library access...</p>
         </div>
       </div>
     );
@@ -144,7 +152,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center max-w-md">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            <h2 className="text-xl font-bold mb-2">Permission Error</h2>
+            <h2 className="text-xl font-bold mb-2">Error</h2>
             <p className="text-sm">{permissions.error}</p>
           </div>
           <button 
@@ -163,14 +171,21 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Book Library</h1>
+          <h1 className="text-3xl font-bold text-gray-900">📚 Book Library</h1>
           <p className="text-gray-600 mt-1">
             Manage your library's book collection
           </p>
+          {/* Debug info */}
+          <div className="text-xs text-gray-500 mt-1">
+            Access Level: {permissions.user?.role || 'Unknown'} | 
+            Add: {permissions.canAdd ? '✅' : '❌'} | 
+            Edit: {permissions.canEdit ? '✅' : '❌'} | 
+            Delete: {permissions.canDelete ? '✅' : '❌'}
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* SECURE: Conditional Add Book button with server-verified permissions */}
+          {/* Add Book button with permission check */}
           <PermissionGate requiredPermissions={['canAdd']}>
             <Button onClick={handleBookAdd} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
@@ -231,16 +246,15 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
         />
       )}
 
-      {/* SECURE Modals with Permission Gates */}
+      {/* Modals */}
       
-      {/* Add Book Modal - Only render if user has permission */}
+      {/* Add Book Modal */}
       <Dialog open={modal.type === 'add'} onOpenChange={closeModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add New Book</DialogTitle>
           </DialogHeader>
           
-          {/* SECURE: Double-check permissions in modal */}
           <PermissionGate 
             requiredPermissions={['canAdd']}
             fallback={
@@ -280,7 +294,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
         </DialogContent>
       </Dialog>
 
-      {/* SECURE Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
       <PermissionGate requiredPermissions={['canDelete']}>
         <ConfirmDialog
           open={modal.type === 'delete'}

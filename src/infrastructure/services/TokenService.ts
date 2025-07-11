@@ -159,26 +159,160 @@ export class TokenService {
   }
 
   /**
-   * Decode JWT token (without verification - for client-side use only) - Enhanced for backend JWT format
+   * FIXED: Enhanced role extraction with better error handling and no fallback to 'Member'
+   */
+  private static extractRole(payload: any): string | null {
+    console.log('🔍 TokenService: Starting role extraction from payload...');
+    console.log('🔍 TokenService: Available payload keys:', Object.keys(payload));
+    
+    // Define all possible role claim names in order of preference
+    const possibleRoleClaims = [
+      'role', // Standard claim
+      'roles', // Array of roles
+      'Role', // Capitalized
+      'http://schemas.microsoft.com/ws/2008/06/identity/claims/role', // Microsoft schema
+      'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role', // Standard schema
+      'custom:role', // Custom namespace
+      'user_role', // Alternative naming
+      'userRole', // CamelCase
+      'memberType', // Your app specific
+      'MemberType', // Capitalized app specific
+      'authority', // Spring Security
+      'authorities' // Spring Security array
+    ];
+    
+    for (const claim of possibleRoleClaims) {
+      if (payload.hasOwnProperty(claim) && payload[claim] != null) {
+        const roleValue = payload[claim];
+        console.log(`🔍 TokenService: Found role claim '${claim}':`, roleValue);
+        
+        // Handle if roles is an array (take first role or find admin)
+        if (Array.isArray(roleValue)) {
+          console.log(`🔍 TokenService: Role claim '${claim}' is array:`, roleValue);
+          
+          // Look for admin roles first
+          const adminRoles = ['Administrator', 'Admin', 'ManagementStaff'];
+          const foundAdminRole = roleValue.find(role => 
+            adminRoles.some(adminRole => 
+              role.toString().toLowerCase().includes(adminRole.toLowerCase())
+            )
+          );
+          
+          if (foundAdminRole) {
+            console.log(`✅ TokenService: Found admin role in array:`, foundAdminRole);
+            return foundAdminRole.toString();
+          }
+          
+          // Otherwise take the first non-empty role
+          const firstRole = roleValue.find(role => role && role.toString().trim());
+          if (firstRole) {
+            console.log(`✅ TokenService: Using first role from array:`, firstRole);
+            return firstRole.toString();
+          }
+        } else if (typeof roleValue === 'string' && roleValue.trim()) {
+          console.log(`✅ TokenService: Found string role:`, roleValue);
+          return roleValue.trim();
+        } else if (roleValue != null) {
+          // Convert to string if it's a number or other type
+          const stringRole = roleValue.toString().trim();
+          if (stringRole) {
+            console.log(`✅ TokenService: Converted role to string:`, stringRole);
+            return stringRole;
+          }
+        }
+      }
+    }
+    
+    console.error('❌ TokenService: No valid role found in token claims!');
+    console.error('❌ TokenService: Full payload for debugging:', JSON.stringify(payload, null, 2));
+    
+    // DON'T RETURN A DEFAULT ROLE - return null to indicate failure
+    return null;
+  }
+
+  /**
+   * FIXED: Enhanced name extraction with better fallback logic
+   */
+  private static extractName(payload: any): string {
+    console.log('🔍 TokenService: Extracting name from payload...');
+    
+    // 1. Try fullName if it exists and is not just email
+    if (payload.fullName && payload.fullName !== payload.email && payload.fullName.trim()) {
+      console.log('✅ TokenService: Using fullName:', payload.fullName);
+      return payload.fullName.trim();
+    }
+    
+    // 2. Build from Microsoft JWT claims (your backend seems to use these)
+    const givenName = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'] || payload.given_name;
+    const surname = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'] || payload.family_name;
+    
+    if (givenName && surname) {
+      const fullName = `${givenName} ${surname}`.trim();
+      console.log('✅ TokenService: Built name from JWT claims:', fullName);
+      return fullName;
+    }
+    
+    // 3. Try individual name fields
+    if (givenName && givenName.trim()) {
+      console.log('✅ TokenService: Using given name only:', givenName);
+      return givenName.trim();
+    }
+    
+    // 4. Try standard name claim (but not if it's just the email)
+    const standardName = payload.name || payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'];
+    if (standardName && standardName !== payload.email && standardName.trim()) {
+      console.log('✅ TokenService: Using standard name claim:', standardName);
+      return standardName.trim();
+    }
+    
+    // 5. Build from firstName/lastName if available
+    const firstName = payload.firstName || payload.first_name;
+    const lastName = payload.lastName || payload.last_name;
+    if (firstName && lastName) {
+      const fullName = `${firstName} ${lastName}`.trim();
+      console.log('✅ TokenService: Built name from firstName/lastName:', fullName);
+      return fullName;
+    }
+    
+    // 6. Try unique_name if it's not an email
+    if (payload.unique_name && !payload.unique_name.includes('@')) {
+      console.log('✅ TokenService: Using unique_name:', payload.unique_name);
+      return payload.unique_name.trim();
+    }
+    
+    // 7. Fallback to email username part
+    if (payload.email && payload.email.includes('@')) {
+      const emailName = payload.email.split('@')[0];
+      console.log('⚠️ TokenService: Using email username as fallback:', emailName);
+      return emailName;
+    }
+    
+    console.log('⚠️ TokenService: No name found, using fallback');
+    return 'Unknown User';
+  }
+
+  /**
+   * FIXED: Decode JWT token with better error handling and role validation
    */
   static decodeToken(token: string): DecodedToken | null {
     try {
+      console.log('🔍 TokenService: Starting token decode process...');
+      
       // Validate token format first
       if (!token || typeof token !== 'string') {
-        console.warn('TokenService: Invalid token - not a string:', typeof token);
+        console.error('❌ TokenService: Invalid token - not a string:', typeof token);
         return null;
       }
 
       const parts = token.split('.');
       if (parts.length !== 3) {
-        console.warn('TokenService: Invalid token format - expected 3 parts, got:', parts.length);
-        console.log('TokenService: Token preview:', token.substring(0, 50) + '...');
+        console.error('❌ TokenService: Invalid token format - expected 3 parts, got:', parts.length);
         return null;
       }
 
       const base64Url = parts[1];
       if (!base64Url) {
-        console.warn('TokenService: Invalid token - missing payload section');
+        console.error('❌ TokenService: Invalid token - missing payload section');
         return null;
       }
 
@@ -191,142 +325,131 @@ export class TokenService {
       );
 
       const payload = JSON.parse(jsonPayload);
-      console.log('TokenService: Decoded JWT payload:', payload);
+      console.log('🔍 TokenService: Successfully parsed JWT payload');
+      console.log('🔍 TokenService: Payload keys:', Object.keys(payload));
       
-      // Enhanced role extraction - check multiple possible claim names
-      const extractRole = (payload: any): string => {
-        const possibleRoleClaims = [
-          'role',
-          'roles', 
-          'Role',
-          'http://schemas.microsoft.com/ws/2008/06/identity/claims/role',
-          'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role',
-          'custom:role',
-          'user_role',
-          'userRole',
-          'memberType',
-          'MemberType'
-        ];
+      // CRITICAL: Extract role first and validate it exists
+      const extractedRole = this.extractRole(payload);
+      if (!extractedRole) {
+        console.error('❌ TokenService: CRITICAL - No role found in token! Cannot proceed.');
+        console.error('❌ TokenService: This will cause role to default to Member');
+        console.error('❌ TokenService: Full payload:', JSON.stringify(payload, null, 2));
         
-        for (const claim of possibleRoleClaims) {
-          if (payload[claim]) {
-            const roleValue = payload[claim];
-            // Handle if roles is an array (take first role)
-            if (Array.isArray(roleValue)) {
-              console.log(`TokenService: Found role in ${claim} (array):`, roleValue[0]);
-              return roleValue[0];
+        // Instead of returning null, let's try one more fallback approach
+        // Check if there's any role-like data we can salvage
+        const possibleRoleFields = Object.keys(payload).filter(key => 
+          key.toLowerCase().includes('role') || 
+          key.toLowerCase().includes('type') ||
+          key.toLowerCase().includes('auth')
+        );
+        
+        if (possibleRoleFields.length > 0) {
+          console.log('🔍 TokenService: Found possible role fields:', possibleRoleFields);
+          for (const field of possibleRoleFields) {
+            const value = payload[field];
+            if (value && typeof value === 'string' && value.trim()) {
+              console.log(`⚠️ TokenService: Using fallback role from ${field}:`, value);
+              break;
             }
-            console.log(`TokenService: Found role in ${claim}:`, roleValue);
-            return roleValue;
           }
         }
         
-        console.warn('TokenService: No role found in token claims. Available claims:', Object.keys(payload));
-        console.log('TokenService: Full payload for debugging:', payload);
-        return 'Member'; // Default fallback
+        // If we still can't find a role, return null to force re-authentication
+        return null;
+      }
+
+      // Enhanced user ID extraction
+      const extractUserId = (): number => {
+        const possibleIdClaims = [
+          'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier',
+          'sub',
+          'userId', 
+          'id',
+          'nameid',
+          'user_id'
+        ];
+        
+        for (const claim of possibleIdClaims) {
+          if (payload[claim]) {
+            const id = parseInt(payload[claim]);
+            if (!isNaN(id) && id > 0) {
+              console.log(`✅ TokenService: Found user ID in ${claim}:`, id);
+              return id;
+            }
+          }
+        }
+        
+        console.warn('⚠️ TokenService: No valid user ID found, defaulting to 0');
+        return 0;
       };
 
-      // Enhanced name extraction
-      const extractName = (payload: any): string => {
-        console.log('TokenService: Extracting name from payload...');
+      // Enhanced email extraction
+      const extractEmail = (): string => {
+        const possibleEmailClaims = [
+          'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+          'email',
+          'unique_name',
+          'upn'
+        ];
         
-        // 1. Try fullName if it exists and is not just email
-        if (payload.fullName && payload.fullName !== payload.email) {
-          console.log('TokenService: Using fullName:', payload.fullName);
-          return payload.fullName;
+        for (const claim of possibleEmailClaims) {
+          if (payload[claim] && typeof payload[claim] === 'string' && payload[claim].includes('@')) {
+            console.log(`✅ TokenService: Found email in ${claim}:`, payload[claim]);
+            return payload[claim];
+          }
         }
         
-        // 2. Build from given name and surname claims (your JWT structure)
-        const givenName = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'] || payload.given_name;
-        const surname = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'] || payload.family_name;
-        
-        if (givenName && surname) {
-          const fullName = `${givenName} ${surname}`.trim();
-          console.log('TokenService: Built name from JWT claims:', fullName);
-          return fullName;
-        }
-        
-        // 3. Try individual name fields
-        if (givenName) {
-          console.log('TokenService: Using given name only:', givenName);
-          return givenName;
-        }
-        
-        // 4. Try standard name claim (but not if it's just the email)
-        const standardName = payload.name || payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'];
-        if (standardName && standardName !== payload.email) {
-          console.log('TokenService: Using standard name claim:', standardName);
-          return standardName;
-        }
-        
-        // 5. Fallback to email username
-        if (payload.email) {
-          const emailName = payload.email.split('@')[0];
-          console.log('TokenService: Using email username as fallback:', emailName);
-          return emailName;
-        }
-        
-        console.log('TokenService: No name found, using fallback');
-        return 'Unknown User';
+        console.warn('⚠️ TokenService: No valid email found');
+        return '';
       };
 
-      // Map various possible claim names to our standard interface
+      const extractedName = this.extractName(payload);
+      const extractedUserId = extractUserId();
+      const extractedEmail = extractEmail();
+
+      // Build the decoded token object
       const decoded: DecodedToken = {
-        // User ID - enhanced extraction
-        userId: parseInt(payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']) || 
-                parseInt(payload.sub) || 
-                parseInt(payload.userId) || 
-                parseInt(payload.id) || 
-                parseInt(payload.nameid) ||
-                0,
-        
-        // Email extraction
-        email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
-               payload.email || 
-               payload.unique_name ||
-               '',
-               
-        // Enhanced name extraction
-        name: extractName(payload),
-        
-        // Use enhanced role extraction
-        role: extractRole(payload),
-              
-        exp: payload.exp,
+        userId: extractedUserId,
+        email: extractedEmail,
+        name: extractedName,
+        role: extractedRole, // This is guaranteed to be valid now
+        exp: payload.exp || 0,
         iat: payload.iat || Math.floor(Date.now() / 1000),
         
-        // Store processed name parts for AuthUser mapping
+        // Store additional fields for debugging
         given_name: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'] || payload.given_name,
         family_name: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'] || payload.family_name,
-        fullName: extractName(payload), // Store the extracted full name
-        
-        // Store original claims for debugging
+        fullName: extractedName,
         sub: payload.sub,
         nameid: payload.nameid,
         unique_name: payload.unique_name,
         ...payload // Include all other claims
       };
       
-      console.log('TokenService: Final decoded user with name:', decoded.name, 'and role:', decoded.role);
+      console.log('✅ TokenService: Successfully decoded token');
+      console.log('✅ TokenService: Final user info:', {
+        userId: decoded.userId,
+        email: decoded.email,
+        name: decoded.name,
+        role: decoded.role
+      });
       
-      // Validate that we have minimum required fields
-      if (!decoded.userId && !decoded.email) {
-        console.warn('TokenService: Token payload missing required user identification');
-        console.warn('TokenService: Available payload keys:', Object.keys(payload));
+      // Final validation
+      if (!decoded.role || decoded.role.trim() === '') {
+        console.error('❌ TokenService: CRITICAL - Final role is empty after extraction!');
         return null;
       }
 
-      console.log('TokenService: Successfully decoded token for user:', decoded.email, 'with role:', decoded.role);
       return decoded;
     } catch (error) {
-      console.error('TokenService: Failed to decode token:', error);
-      console.log('TokenService: Problematic token preview:', token?.substring(0, 100));
+      console.error('❌ TokenService: Failed to decode token:', error);
+      console.log('❌ TokenService: Problematic token preview:', token?.substring(0, 100));
       return null;
     }
   }
 
   /**
-   * Get current user from token
+   * Get current user from token with better error handling
    */
   static getCurrentUser(): DecodedToken | null {
     try {
@@ -336,15 +459,29 @@ export class TokenService {
         return null;
       }
 
-      return this.decodeToken(token);
+      const decoded = this.decodeToken(token);
+      if (!decoded) {
+        console.error('TokenService: Failed to decode token - clearing invalid token');
+        this.clearTokens(); // Clear invalid token
+        return null;
+      }
+
+      if (!decoded.role || decoded.role.trim() === '') {
+        console.error('TokenService: Token has no valid role - clearing token');
+        this.clearTokens(); // Clear token without valid role
+        return null;
+      }
+
+      return decoded;
     } catch (error) {
       console.error('TokenService: Failed to get current user:', error);
+      this.clearTokens(); // Clear potentially corrupted data
       return null;
     }
   }
 
   /**
-   * Check if user is authenticated
+   * Check if user is authenticated with role validation
    */
   static isAuthenticated(): boolean {
     try {
@@ -360,13 +497,29 @@ export class TokenService {
         return false;
       }
 
-      // If token exists and is not expired, consider user authenticated
-      console.log('TokenService: User appears to be authenticated');
+      // Try to decode and validate the token has a role
+      const decoded = this.decodeToken(token);
+      if (!decoded || !decoded.role || decoded.role.trim() === '') {
+        console.log('TokenService: Token is invalid or has no role');
+        this.clearTokens(); // Clear invalid token
+        return false;
+      }
+
+      console.log('TokenService: User is authenticated with role:', decoded.role);
       return true;
     } catch (error) {
       console.error('TokenService: Failed to check authentication:', error);
+      this.clearTokens(); // Clear potentially corrupted data
       return false;
     }
+  }
+
+  /**
+   * Check if we need token refresh (simple version)
+   */
+  static needsTokenRefresh(): boolean {
+    // For now, we don't have token refresh, so return false
+    return false;
   }
 
   /**
@@ -421,6 +574,23 @@ export class TokenService {
       const parts = token.split('.');
       const tokenType = localStorage.getItem(this.TOKEN_TYPE_KEY);
       const expiresAt = localStorage.getItem(this.EXPIRES_AT_KEY);
+      
+      // Try to decode for additional info
+      let decodedInfo = null;
+      try {
+        const decoded = this.decodeToken(token);
+        if (decoded) {
+          decodedInfo = {
+            userId: decoded.userId,
+            email: decoded.email,
+            role: decoded.role,
+            name: decoded.name,
+            exp: decoded.exp
+          };
+        }
+      } catch (e) {
+        // Ignore decode errors in info function
+      }
 
       return {
         hasToken: true,
@@ -429,7 +599,8 @@ export class TokenService {
         isJWT: parts.length === 3,
         parts: parts.length,
         expiresAt: expiresAt ? new Date(parseInt(expiresAt, 10)).toISOString() : null,
-        preview: token.substring(0, 20) + '...'
+        preview: token.substring(0, 20) + '...',
+        decoded: decodedInfo
       };
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) };

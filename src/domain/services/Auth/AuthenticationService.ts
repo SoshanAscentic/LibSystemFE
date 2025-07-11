@@ -1,6 +1,7 @@
 import { Result } from '../../../shared/types/Result';
 import { BusinessError, ValidationError } from '../../../shared/types/errors';
 import { AuthValidationService } from './AuthValidationService';
+import { TokenService } from '../../../infrastructure/services/TokenService';
 
 export interface AuthUser {
   userId: number;
@@ -45,17 +46,16 @@ export class AuthenticationService {
   constructor(
     private validationService: AuthValidationService
   ) {
-    // 🔧 FIX: Use proper backend URL
     this.baseURL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7033';
     console.log('🔗 AuthenticationService: Using API base URL:', this.baseURL);
   }
 
   /**
-   * SECURE Login - With fallback to old endpoint if secure endpoint not available
+   * FIXED: Login with better role handling and token validation
    */
   async login(credentials: LoginCredentials): Promise<Result<AuthenticationResult, BusinessError>> {
     try {
-      console.log('🔐 AuthenticationService: Starting SECURE login process for:', credentials.email);
+      console.log('🔐 AuthenticationService: Starting login process for:', credentials.email);
       
       // Validate input
       const validation = this.validationService.validateLoginCredentials(credentials);
@@ -72,83 +72,82 @@ export class AuthenticationService {
         rememberMe: credentials.rememberMe || false
       };
 
-      console.log('🔐 AuthenticationService: Attempting secure login...');
+      console.log('🔐 AuthenticationService: Making login request...');
       
-      // Try secure endpoint first
-      try {
-        const response = await fetch(`${this.baseURL}/api/auth/secure/login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(loginRequest)
-        });
+      const response = await fetch(`${this.baseURL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginRequest)
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log('✅ AuthenticationService: Secure login successful');
+      console.log('🔐 AuthenticationService: Login response status:', response.status);
 
-          if (data.success && data.data) {
-            const authUser = this.mapServerResponseToAuthUser(data.data);
-            
-            return Result.success({
-              user: authUser,
-              isAuthenticated: true
-            });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ AuthenticationService: Login successful');
+        console.log('🔍 AuthenticationService: Raw server response:', data);
+
+        if (data.success && data.data) {
+          // CRITICAL: Validate the token before storing
+          const token = data.data.token;
+          if (!token) {
+            console.error('❌ AuthenticationService: No token in server response!');
+            return Result.failure(new BusinessError('Login failed - no authentication token received', 'LOGIN_ERROR'));
           }
-        } else if (response.status === 404) {
-          console.log('⚠️ AuthenticationService: Secure endpoint not found, falling back to old endpoint');
-          throw new Error('Secure endpoint not available');
-        }
 
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error?.message || errorData.message || 'Login failed';
-        
-        return Result.failure(new BusinessError('Login failed', 'LOGIN_ERROR', errorMessage));
+          // Decode and validate the token immediately
+          console.log('🔍 AuthenticationService: Validating received token...');
+          const decodedToken = TokenService.decodeToken(token);
+          if (!decodedToken) {
+            console.error('❌ AuthenticationService: Received invalid token from server!');
+            return Result.failure(new BusinessError('Login failed - invalid authentication token', 'LOGIN_ERROR'));
+          }
 
-      } catch (secureError) {
-        console.log('⚠️ AuthenticationService: Secure login failed, trying fallback to old endpoint');
-        
-        // Fallback to old endpoint
-        try {
-          const fallbackResponse = await fetch(`${this.baseURL}/api/auth/login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(loginRequest)
+          if (!decodedToken.role || decodedToken.role.trim() === '') {
+            console.error('❌ AuthenticationService: Token has no valid role!');
+            console.error('❌ AuthenticationService: Decoded token:', decodedToken);
+            return Result.failure(new BusinessError('Login failed - no user role in authentication token', 'LOGIN_ERROR'));
+          }
+
+          console.log('✅ AuthenticationService: Token validation successful');
+          console.log('✅ AuthenticationService: User role from token:', decodedToken.role);
+
+          // Store the validated token
+          const tokenData = {
+            accessToken: token,
+            refreshToken: data.data.refreshToken || token, // Use same token if no refresh token
+            tokenType: 'Bearer',
+            expiresAt: this.calculateExpiresAt(data.data.expiresAt || decodedToken.exp)
+          };
+
+          TokenService.storeTokens(tokenData);
+          console.log('📝 AuthenticationService: Token stored successfully');
+
+          // Create AuthUser from the DECODED TOKEN, not server response
+          // This ensures consistency with token refresh scenarios
+          const authUser = this.mapDecodedTokenToAuthUser(decodedToken, data.data);
+          
+          console.log('✅ AuthenticationService: Final AuthUser:', {
+            userId: authUser.userId,
+            email: authUser.email,
+            role: authUser.role,
+            fullName: authUser.fullName
           });
 
-          if (fallbackResponse.ok) {
-            const fallbackData = await fallbackResponse.json();
-            console.log('✅ AuthenticationService: Fallback login successful');
-
-            if (fallbackData.success && fallbackData.data) {
-              const authUser = this.mapServerResponseToAuthUser(fallbackData.data);
-              
-              // Store token in localStorage for fallback compatibility
-              if (fallbackData.data.token) {
-                localStorage.setItem('library_access_token', fallbackData.data.token);
-              }
-              
-              return Result.success({
-                user: authUser,
-                isAuthenticated: true
-              });
-            }
-          }
-
-          const fallbackErrorData = await fallbackResponse.json().catch(() => ({}));
-          const fallbackErrorMessage = fallbackErrorData.error?.message || 'Login failed';
-          
-          return Result.failure(new BusinessError('Login failed', 'LOGIN_ERROR', fallbackErrorMessage));
-
-        } catch (fallbackError) {
-          console.error('❌ AuthenticationService: Both secure and fallback login failed');
-          return Result.failure(new BusinessError('Login failed', 'LOGIN_ERROR', 'Unable to authenticate'));
+          return Result.success({
+            user: authUser,
+            isAuthenticated: true
+          });
         }
       }
+
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error?.message || errorData.message || 'Login failed';
+      
+      console.error('❌ AuthenticationService: Login failed:', errorMessage);
+      return Result.failure(new BusinessError('Login failed', 'LOGIN_ERROR', errorMessage));
 
     } catch (error: any) {
       console.error('❌ AuthenticationService: Unexpected error during login:', error);
@@ -159,7 +158,7 @@ export class AuthenticationService {
   }
 
   /**
-   * SECURE Register - With fallback
+   * FIXED: Register with better role handling
    */
   async register(userData: RegisterData): Promise<Result<AuthenticationResult, BusinessError>> {
     try {
@@ -181,33 +180,7 @@ export class AuthenticationService {
         role: userData.role
       };
 
-      // Try secure endpoint first, fallback to old endpoint
-      try {
-        const response = await fetch('/api/auth/secure/register', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(registerRequest)
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.data) {
-            const authUser = this.mapServerResponseToAuthUser(data.data);
-            return Result.success({
-              user: authUser,
-              isAuthenticated: true
-            });
-          }
-        }
-      } catch (secureError) {
-        console.log('⚠️ Using fallback registration endpoint');
-      }
-
-      // Fallback to old endpoint
-      const fallbackResponse = await fetch('/api/auth/register', {
+      const response = await fetch(`${this.baseURL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -215,15 +188,31 @@ export class AuthenticationService {
         body: JSON.stringify(registerRequest)
       });
 
-      if (fallbackResponse.ok) {
-        const data = await fallbackResponse.json();
+      if (response.ok) {
+        const data = await response.json();
         if (data.success && data.data) {
-          const authUser = this.mapServerResponseToAuthUser(data.data);
-          
-          // Store token for fallback compatibility
-          if (data.data.token) {
-            localStorage.setItem('library_access_token', data.data.token);
+          // Same validation as login
+          const token = data.data.token;
+          if (!token) {
+            return Result.failure(new BusinessError('Registration failed - no authentication token received', 'REGISTRATION_ERROR'));
           }
+
+          const decodedToken = TokenService.decodeToken(token);
+          if (!decodedToken || !decodedToken.role) {
+            return Result.failure(new BusinessError('Registration failed - invalid authentication token', 'REGISTRATION_ERROR'));
+          }
+
+          // Store the validated token
+          const tokenData = {
+            accessToken: token,
+            refreshToken: data.data.refreshToken || token,
+            tokenType: 'Bearer',
+            expiresAt: this.calculateExpiresAt(data.data.expiresAt || decodedToken.exp)
+          };
+
+          TokenService.storeTokens(tokenData);
+
+          const authUser = this.mapDecodedTokenToAuthUser(decodedToken, data.data);
           
           return Result.success({
             user: authUser,
@@ -232,7 +221,9 @@ export class AuthenticationService {
         }
       }
 
-      return Result.failure(new BusinessError('Registration failed', 'REGISTRATION_ERROR'));
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error?.message || 'Registration failed';
+      return Result.failure(new BusinessError('Registration failed', 'REGISTRATION_ERROR', errorMessage));
 
     } catch (error: any) {
       return Result.failure(
@@ -242,82 +233,92 @@ export class AuthenticationService {
   }
 
   /**
-   * SECURE Logout - With fallback
+   * Standard Logout
    */
   async logout(): Promise<Result<void, BusinessError>> {
     try {
       console.log('🔐 AuthenticationService: Starting logout');
       
-      // Try secure logout first
+      // Try to call logout endpoint
       try {
-        await fetch('/api/auth/secure/logout', {
+        await fetch(`${this.baseURL}/api/auth/logout`, {
           method: 'POST',
-          credentials: 'include'
+          headers: {
+            'Authorization': `Bearer ${TokenService.getAccessToken()}`,
+            'Content-Type': 'application/json',
+          }
         });
-      } catch (secureError) {
-        console.log('⚠️ Secure logout failed, using fallback');
+      } catch (error) {
+        console.log('⚠️ AuthenticationService: Logout API failed, but continuing with local cleanup');
       }
 
-      // Clear localStorage (for fallback compatibility)
-      localStorage.removeItem('library_access_token');
-      localStorage.removeItem('library_refresh_token');
-      localStorage.removeItem('library_token_type');
-      localStorage.removeItem('library_expires_at');
+      // Clear authentication data
+      this.clearAuthentication();
       
       console.log('✅ AuthenticationService: Logout completed');
       return Result.success(undefined);
     } catch (error) {
       console.warn('⚠️ AuthenticationService: Logout API failed, but considering successful locally');
+      this.clearAuthentication();
       return Result.success(undefined);
     }
   }
 
   /**
-   * SECURE Get Current User - With fallback
+   * FIXED: Get Current User with better token handling
    */
   async getCurrentUser(): Promise<Result<AuthUser | null, BusinessError>> {
     try {
       console.log('🔐 AuthenticationService: Getting current user');
       
-      // Try secure endpoint first
+      // First, try to get user from stored token
+      const tokenUser = this.getCurrentUserFromToken();
+      if (tokenUser) {
+        console.log('✅ AuthenticationService: Got user from token:', {
+          userId: tokenUser.userId,
+          email: tokenUser.email,
+          role: tokenUser.role
+        });
+        return Result.success(tokenUser);
+      }
+
+      // If no valid token, try to get from server
+      const token = TokenService.getAccessToken();
+      if (!token) {
+        console.log('🔐 AuthenticationService: No access token found');
+        return Result.success(null);
+      }
+
       try {
-        const response = await fetch('/api/auth/secure/me', {
+        const response = await fetch(`${this.baseURL}/api/auth/me`, {
           method: 'GET',
-          credentials: 'include'
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
         });
 
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {
+            // If we get data from server, validate it has a role
+            if (!data.data.role) {
+              console.error('❌ AuthenticationService: Server user data has no role');
+              this.clearAuthentication();
+              return Result.success(null);
+            }
+            
             const authUser = this.mapServerResponseToAuthUser(data.data);
             return Result.success(authUser);
           }
+        } else if (response.status === 401) {
+          // Token expired or invalid
+          console.log('🔐 AuthenticationService: Token expired, clearing authentication');
+          this.clearAuthentication();
+          return Result.success(null);
         }
-      } catch (secureError) {
-        console.log('⚠️ Secure getCurrentUser failed, using fallback');
-      }
-
-      // Fallback: Try old endpoint with token
-      const token = localStorage.getItem('library_access_token');
-      if (token) {
-        try {
-          const response = await fetch('/api/auth/me', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.data) {
-              const authUser = this.mapServerResponseToAuthUser(data.data);
-              return Result.success(authUser);
-            }
-          }
-        } catch (fallbackError) {
-          console.log('⚠️ Fallback getCurrentUser also failed');
-        }
+      } catch (error) {
+        console.log('⚠️ AuthenticationService: getCurrentUser API failed');
       }
 
       return Result.success(null);
@@ -328,110 +329,59 @@ export class AuthenticationService {
   }
 
   /**
-   * SECURE Authentication Check - With fallback
+   * Check Authentication Status
    */
-  async isAuthenticated(): Promise<boolean> {
-    try {
-      // Try secure verification first
-      try {
-        const response = await fetch('/api/auth/secure/verify', {
-          method: 'GET',
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          return true;
-        }
-      } catch (secureError) {
-        console.log('⚠️ Secure auth check failed, using fallback');
-      }
-
-      // Fallback: Check localStorage token
-      const token = localStorage.getItem('library_access_token');
-      if (token) {
-        try {
-          // Try to decode token to check if it's valid
-          const parts = token.split('.');
-          if (parts.length === 3) {
-            const payload = JSON.parse(atob(parts[1]));
-            const now = Math.floor(Date.now() / 1000);
-            return payload.exp > now;
-          }
-        } catch (tokenError) {
-          console.log('⚠️ Token validation failed');
-        }
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('❌ AuthenticationService: Authentication check failed:', error);
-      return false;
-    }
+  isAuthenticated(): boolean {
+    // Use the enhanced TokenService method
+    return TokenService.isAuthenticated();
   }
 
   /**
-   * SECURE Token Refresh - With fallback
+   * Check if token needs refresh (simple version)
+   */
+  needsTokenRefresh(): boolean {
+    return TokenService.needsTokenRefresh();
+  }
+
+  /**
+   * Token refresh (placeholder)
    */
   async refreshAuthentication(): Promise<Result<AuthenticationResult, BusinessError>> {
-    try {
-      console.log('🔐 AuthenticationService: Refreshing authentication');
-      
-      // Try secure refresh first
-      try {
-        const response = await fetch('/api/auth/secure/refresh', {
-          method: 'POST',
-          credentials: 'include'
-        });
+    // For now, just return failure since we don't have refresh tokens implemented
+    return Result.failure(new BusinessError('Token refresh not implemented', 'REFRESH_ERROR'));
+  }
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.data) {
-            const authUser = this.mapServerResponseToAuthUser(data.data);
-            return Result.success({
-              user: authUser,
-              isAuthenticated: true
-            });
-          }
-        }
-      } catch (secureError) {
-        console.log('⚠️ Secure refresh failed');
+  /**
+   * FIXED: Get current user from token with better validation
+   */
+  getCurrentUserFromToken(): AuthUser | null {
+    try {
+      const decodedToken = TokenService.getCurrentUser();
+      if (!decodedToken) {
+        console.log('AuthenticationService: No valid decoded token available');
+        return null;
       }
 
-      return Result.failure(new BusinessError('Token refresh failed', 'REFRESH_ERROR'));
+      if (!decodedToken.role || decodedToken.role.trim() === '') {
+        console.error('AuthenticationService: Token has no valid role, clearing authentication');
+        this.clearAuthentication();
+        return null;
+      }
+
+      console.log('✅ AuthenticationService: Creating AuthUser from token with role:', decodedToken.role);
+      return this.mapDecodedTokenToAuthUser(decodedToken);
     } catch (error) {
-      return Result.failure(new BusinessError('Unexpected error during token refresh', 'UNKNOWN_ERROR', error));
+      console.error('AuthenticationService: Error getting user from token:', error);
+      this.clearAuthentication();
+      return null;
     }
   }
 
   /**
-   * Change password
+   * Clear authentication data
    */
-  async changePassword(passwordData: ChangePasswordRequest): Promise<Result<void, BusinessError>> {
-    try {
-      const validation = this.validationService.validatePasswordChange(passwordData);
-      if (!validation.isValid) {
-        return Result.failure(
-          new ValidationError(validation.errors.join(', '), 'passwordData', passwordData)
-        );
-      }
-
-      const response = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(passwordData)
-      });
-
-      if (response.ok) {
-        return Result.success(undefined);
-      }
-
-      return Result.failure(new BusinessError('Password change failed', 'PASSWORD_CHANGE_ERROR'));
-    } catch (error) {
-      return Result.failure(new BusinessError('Unexpected error during password change', 'UNKNOWN_ERROR', error));
-    }
+  clearAuthentication(): void {
+    TokenService.clearTokens();
   }
 
   /**
@@ -446,7 +396,7 @@ export class AuthenticationService {
         );
       }
 
-      const response = await fetch('/api/auth/forgot-password', {
+      const response = await fetch(`${this.baseURL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -465,18 +415,99 @@ export class AuthenticationService {
   }
 
   /**
-   * Map server response to AuthUser
+   * FIXED: Map decoded token to AuthUser (primary method)
+   */
+  private mapDecodedTokenToAuthUser(decodedToken: any, serverData?: any): AuthUser {
+    console.log('🗂️ AuthenticationService: Mapping decoded token to AuthUser');
+    console.log('🗂️ AuthenticationService: Token data:', {
+      userId: decodedToken.userId,
+      email: decodedToken.email,
+      role: decodedToken.role,
+      name: decodedToken.name
+    });
+
+    // Ensure we have a valid role
+    if (!decodedToken.role || decodedToken.role.trim() === '') {
+      throw new Error('Cannot create AuthUser - no valid role in token');
+    }
+
+    // Split the name into first and last name
+    const fullName = decodedToken.name || decodedToken.fullName || '';
+    const nameParts = fullName.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+    const authUser: AuthUser = {
+      userId: decodedToken.userId || 0,
+      email: decodedToken.email || '',
+      firstName: firstName,
+      lastName: lastName,
+      fullName: fullName || decodedToken.email || 'Unknown User',
+      role: decodedToken.role, // This is the critical field
+      isActive: true, // Assume active if they have a valid token
+      createdAt: serverData?.createdAt || new Date().toISOString()
+    };
+
+    console.log('✅ AuthenticationService: Created AuthUser with role:', authUser.role);
+    return authUser;
+  }
+
+  /**
+   * Map server response to AuthUser (fallback method)
    */
   private mapServerResponseToAuthUser(serverData: any): AuthUser {
+    console.log('🗂️ AuthenticationService: Mapping server response to AuthUser');
+    console.log('🗂️ AuthenticationService: Server data keys:', Object.keys(serverData));
+
+    // Ensure server data has a role
+    if (!serverData.role) {
+      console.error('❌ Server response has no role field!');
+      throw new Error('Cannot create AuthUser - no role in server response');
+    }
+
     return {
       userId: serverData.userId || serverData.id || 0,
       email: serverData.email || '',
       firstName: serverData.firstName || serverData.fullName?.split(' ')[0] || '',
       lastName: serverData.lastName || serverData.fullName?.split(' ').slice(1).join(' ') || '',
       fullName: serverData.fullName || `${serverData.firstName || ''} ${serverData.lastName || ''}`.trim() || serverData.email || 'Unknown User',
-      role: serverData.role || 'Member',
+      role: serverData.role, // Critical: Use server role directly
       isActive: serverData.isActive !== false,
       createdAt: serverData.createdAt || new Date().toISOString()
     };
+  }
+
+  /**
+   * Helper method to calculate expiration timestamp
+   */
+  private calculateExpiresAt(expiresAt: string | number | undefined): number {
+    try {
+      if (!expiresAt) {
+        console.warn('AuthenticationService: No expiration provided, defaulting to 1 hour');
+        return Date.now() + (3600 * 1000); // 1 hour from now
+      }
+      
+      let expirationTimestamp: number;
+      
+      if (typeof expiresAt === 'string') {
+        expirationTimestamp = new Date(expiresAt).getTime();
+      } else if (typeof expiresAt === 'number') {
+        // If it's a Unix timestamp (seconds), convert to milliseconds
+        expirationTimestamp = expiresAt > 1000000000000 ? expiresAt : expiresAt * 1000;
+      } else {
+        throw new Error('Invalid expiration format');
+      }
+      
+      // Validate the calculated timestamp
+      if (isNaN(expirationTimestamp) || expirationTimestamp <= Date.now()) {
+        console.warn('AuthenticationService: Invalid expiration timestamp, using default');
+        return Date.now() + (3600 * 1000);
+      }
+      
+      return expirationTimestamp;
+    } catch (error) {
+      console.warn('AuthenticationService: Failed to calculate expiration:', error);
+      return Date.now() + (3600 * 1000); // Default to 1 hour
+    }
   }
 }

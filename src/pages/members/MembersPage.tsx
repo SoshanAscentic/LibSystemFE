@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { Grid, List, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useMembers } from '../../presentation/hooks/Members/useMembers';
-import { useSecurePermissions, PermissionGate } from '../../hooks/useSecurePermissions'; // CHANGED
-
+import { useUserPermissions } from '../../hooks/useUserPermissions'; 
+import { PermissionGate } from '../../components/PermissionGate';
 type ViewMode = 'grid' | 'table';
 type ModalType = 'add' | 'view' | null;
 
@@ -32,7 +32,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({ controller }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // SECURE Permissions - Server-verified (only administrators can manage members)
-  const permissions = useSecurePermissions(); // CHANGED
+const permissions = useUserPermissions();
 
   // Data hooks
   const { members, isLoading: membersLoading, refresh: refreshMembers } = useMembers();
