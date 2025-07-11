@@ -21,14 +21,14 @@ export enum MemberType {
   REGULAR_MEMBER = 'RegularMember',
   MINOR_STAFF = 'MinorStaff',
   MANAGEMENT_STAFF = 'ManagementStaff',
-  ADMINISTRATOR = "ADMINISTRATOR"
+  ADMINISTRATOR = 'Administrator'  
 }
 
 export enum UserRole {
   MEMBER = 'Member',
   MINOR_STAFF = 'MinorStaff', 
   MANAGEMENT_STAFF = 'ManagementStaff',
-  ADMINISTRATOR = 'Administrator'
+  ADMINISTRATOR = 'Administrator'  
 }
 
 export interface BorrowedBook {

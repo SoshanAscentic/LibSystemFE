@@ -25,7 +25,6 @@ export function formatDate(date: string | Date): string {
   }
 }
 
-
 export function formatDateTime(date: Date | string): string {
   return new Date(date).toLocaleString('en-US', {
     year: 'numeric',
@@ -77,6 +76,7 @@ export function formatRelativeTime(date: string | Date): string {
     return 'Invalid date';
   }
 }
+
 export function isOverdue(dueDate: string | Date): boolean {
   try {
     const due = new Date(dueDate);

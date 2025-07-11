@@ -44,9 +44,11 @@ import { MembersController } from '../../application/controllers/MemberControlle
 import { AuthController } from '../../application/controllers/AuthController';
 import { BorrowingController } from '../../application/controllers/BorrowingController';
 
-export const configureDependencies = (container: Container, navigate: (path: string | number) => void): void => {
+export const configureDependencies = (
+  container: Container, 
+  navigate: (path: string | number, options?: { state?: any }) => void // Updated signature
+): void => {
   console.log('Configuring dependencies...');
-
   try {
     // Infrastructure layer - API and External Services
     console.log('Registering infrastructure services...');
@@ -89,7 +91,7 @@ export const configureDependencies = (container: Container, navigate: (path: str
     console.log('Registering UI services...');
     container.registerSingleton(SERVICE_KEYS.NAVIGATION_SERVICE, () => {
       console.log('🧭 Creating NavigationService');
-      return new NavigationServiceImpl(navigate);
+      return new NavigationServiceImpl(navigate); 
     });
 
     container.registerSingleton(SERVICE_KEYS.NOTIFICATION_SERVICE, () => {

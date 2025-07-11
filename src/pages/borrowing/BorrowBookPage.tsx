@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom'; // Add this import
 import { BorrowingController } from '../../application/controllers/BorrowingController';
 import { BorrowBookDto } from '../../domain/dtos/BorrowingDto';
 import { Book } from '../../domain/entities/Book';
@@ -21,6 +22,7 @@ interface BorrowBookPageProps {
 
 export const BorrowBookPage: React.FC<BorrowBookPageProps> = ({ controller }) => {
   const { user } = useAuth();
+  const location = useLocation(); // Add this to get router state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -31,33 +33,72 @@ export const BorrowBookPage: React.FC<BorrowBookPageProps> = ({ controller }) =>
     return date.toISOString().split('T')[0];
   });
 
-  // Memoize the book filters to prevent re-renders
-  const bookFilters = useMemo(() => ({ isAvailable: true }), []);
+  // Get pre-selected book ID from router state
+  const preSelectedBookId = (location.state as any)?.preSelectedBookId;
 
-  // Check if user can select other members
+  // Check if user can select other members (only staff can)
   const canSelectOtherMembers = useMemo(() => 
-    user?.role === 'ManagementStaff' || user?.role === 'Administrator', 
+    user?.role === 'MinorStaff' || user?.role === 'ManagementStaff' || user?.role === 'Administrator', 
     [user?.role]
   );
 
-  // Data hooks with memoized filters
+  // Memoize the book filters to prevent re-renders
+  const bookFilters = useMemo(() => ({ isAvailable: true }), []);
+
+  // Data hooks - only load members if user can select other members
   const { books, isLoading: booksLoading } = useBooks(bookFilters);
-  const { members, isLoading: membersLoading } = useMembers();
+  const { members, isLoading: membersLoading } = useMembers(canSelectOtherMembers ? undefined : null);
 
-  // Find current user as member - memoized
-  const currentUserAsMember = useMemo(() => 
-    members.find(member => member.email === user?.email), 
-    [members, user?.email]
-  );
+  // Create current user as member object for regular members
+  const currentUserAsMember = useMemo(() => {
+    if (!user) return null;
 
-  // Set default member
+    if (canSelectOtherMembers) {
+      // For staff, find them in the members list
+      return members.find(member => member.email === user.email);
+    } else {
+      // For regular members, create member object from auth user data
+      return {
+        memberId: user.userId, // Assuming userId corresponds to memberId
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: user.fullName,
+        email: user.email,
+        memberType: 'RegularMember' as any,
+        role: 'Member' as any,
+        isActive: user.isActive,
+        registrationDate: new Date(user.createdAt),
+        borrowedBooksCount: 0, // This could be fetched separately if needed
+        canBorrowBooks: true,
+        canViewBooks: true,
+        canViewMembers: false,
+        canManageBooks: false,
+      } as Member;
+    }
+  }, [canSelectOtherMembers, members, user]);
+
+  // Set default member (for regular members, automatically select themselves)
   useEffect(() => {
-    if (!canSelectOtherMembers && currentUserAsMember && !selectedMember) {
+    if (currentUserAsMember && !selectedMember) {
       setSelectedMember(currentUserAsMember);
     }
-  }, [canSelectOtherMembers, currentUserAsMember, selectedMember]);
+  }, [currentUserAsMember, selectedMember]);
 
-  // Memoized handlers to prevent re-renders
+  // Pre-select book if bookId was passed via router state
+  useEffect(() => {
+    if (preSelectedBookId && books.length > 0 && !selectedBook) {
+      const bookToSelect = books.find(book => book.bookId === preSelectedBookId);
+      if (bookToSelect && bookToSelect.isAvailable) {
+        console.log('BorrowBookPage: Pre-selecting book:', bookToSelect.title);
+        setSelectedBook(bookToSelect);
+      } else if (bookToSelect && !bookToSelect.isAvailable) {
+        console.warn('BorrowBookPage: Pre-selected book is not available:', bookToSelect.title);
+        // You might want to show a notification here
+      }
+    }
+  }, [preSelectedBookId, books, selectedBook]);
+
+  // Memoized handlers
   const handleBack = useCallback(() => {
     controller.handleNavigateBack();
   }, [controller]);
@@ -126,7 +167,7 @@ export const BorrowBookPage: React.FC<BorrowBookPageProps> = ({ controller }) =>
   );
 
   // Show loading state
-  if (booksLoading || membersLoading) {
+  if (booksLoading || (canSelectOtherMembers && membersLoading)) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -135,7 +176,7 @@ export const BorrowBookPage: React.FC<BorrowBookPageProps> = ({ controller }) =>
             Back
           </Button>
         </div>
-        <LoadingState message="Loading books and members..." />
+        <LoadingState message={canSelectOtherMembers ? "Loading books and members..." : "Loading books..."} />
       </div>
     );
   }
@@ -148,11 +189,27 @@ export const BorrowBookPage: React.FC<BorrowBookPageProps> = ({ controller }) =>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
+        <div className="text-right">
+          <h1 className="text-2xl font-bold text-gray-900">Borrow a Book</h1>
+          {!canSelectOtherMembers && selectedMember && (
+            <p className="text-sm text-gray-600">
+              Borrowing for: {selectedMember.fullName}
+            </p>
+          )}
+          {/* {preSelectedBookId && selectedBook && (
+            <p className="text-sm text-blue-600">
+              Pre-selected: {selectedBook.title}
+            </p>
+          )} */}
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Member Selection (if authorized) */}
+      <div className={cn(
+        "grid gap-6",
+        canSelectOtherMembers ? "grid-cols-1 lg:grid-cols-3" : "grid-cols-1"
+      )}>
+        {/* Member Selection (only for staff) */}
         {canSelectOtherMembers && (
           <Card>
             <CardHeader>
@@ -196,11 +253,16 @@ export const BorrowBookPage: React.FC<BorrowBookPageProps> = ({ controller }) =>
         )}
 
         {/* Book Selection */}
-        <Card className={canSelectOtherMembers ? "lg:col-span-2" : "lg:col-span-3"}>
+        <Card className={canSelectOtherMembers ? "lg:col-span-2" : "col-span-1"}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="w-5 h-5" />
               Select Book to Borrow
+              {/* {preSelectedBookId && (
+                <span className="text-sm font-normal text-blue-600">
+                  (Book pre-selected)
+                </span>
+              )} */}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -219,7 +281,9 @@ export const BorrowBookPage: React.FC<BorrowBookPageProps> = ({ controller }) =>
                     "p-4 border rounded-lg cursor-pointer transition-colors",
                     selectedBook?.bookId === book.bookId
                       ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300"
+                      : "border-gray-200 hover:border-gray-300",
+                    // Highlight pre-selected book
+                    preSelectedBookId === book.bookId && "ring-2 ring-blue-200"
                   )}
                   onClick={() => handleBookSelect(book)}
                 >
@@ -228,6 +292,11 @@ export const BorrowBookPage: React.FC<BorrowBookPageProps> = ({ controller }) =>
                   <div className="text-xs text-gray-500 mt-1">
                     {book.category} • {book.publicationYear}
                   </div>
+                  {/* {preSelectedBookId === book.bookId && (
+                    <div className="text-xs text-blue-600 mt-1 font-medium">
+                      ✓ Pre-selected
+                    </div>
+                  )} */}  
                 </div>
               ))}
               {filteredBooks.length === 0 && (
@@ -247,7 +316,10 @@ export const BorrowBookPage: React.FC<BorrowBookPageProps> = ({ controller }) =>
             <CardTitle>Confirm Borrowing</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={cn(
+              "grid gap-4",
+              canSelectOtherMembers ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+            )}>
               <div>
                 <Label>Selected Book</Label>
                 <div className="p-3 bg-gray-50 rounded-lg">
@@ -255,13 +327,15 @@ export const BorrowBookPage: React.FC<BorrowBookPageProps> = ({ controller }) =>
                   <div className="text-sm text-gray-600">by {selectedBook.author}</div>
                 </div>
               </div>
-              <div>
-                <Label>Selected Member</Label>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <div className="font-medium">{selectedMember.fullName}</div>
-                  <div className="text-sm text-gray-600">{selectedMember.email}</div>
+              {canSelectOtherMembers && (
+                <div>
+                  <Label>Selected Member</Label>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="font-medium">{selectedMember.fullName}</div>
+                    <div className="text-sm text-gray-600">{selectedMember.email}</div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div>

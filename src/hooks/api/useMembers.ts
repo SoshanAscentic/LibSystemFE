@@ -1,13 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Member } from '../../infrastructure/api/MembersApiService';
 import { useMembersController } from '../../presentation/hooks/Members/useMembersController';
-
-interface MemberFilters {
-  name?: string;
-  email?: string;
-  status?: string;
-  // Add other filter properties as needed
-}
+import { MemberFilters } from '../../domain/valueObjects/MemberFilters';
 
 interface UseMembersResult {
   members: Member[];
@@ -29,7 +23,7 @@ export const useMembers = (filters?: MemberFilters): UseMembersResult => {
     setError(null);
     
     try {
-      const result = await controller.handleGetAllMembers();
+      const result = await controller.handleGetAllMembers(filters);
       console.log('useMembers: Load result:', result);
       
       setMembers(result.members);

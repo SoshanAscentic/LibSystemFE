@@ -63,9 +63,10 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Actions - Only show delete when book is available */}
           <div className="flex gap-2">
-            {canDelete && onDelete && (
+            {/* Only show delete button if book is available (not borrowed) */}
+            {canDelete && book.isAvailable && onDelete && (
               <Button 
                 variant="destructive" 
                 onClick={() => onDelete(book)}
@@ -74,6 +75,13 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
               </Button>
+            )}
+            
+            {/* Show message when trying to delete borrowed book */}
+            {canDelete && !book.isAvailable && (
+              <div className="text-sm text-gray-500 italic">
+                Cannot delete borrowed book
+              </div>
             )}
           </div>
         </div>

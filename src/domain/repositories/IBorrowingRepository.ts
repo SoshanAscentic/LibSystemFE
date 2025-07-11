@@ -12,7 +12,4 @@ export interface IBorrowingRepository {
   ): Promise<Result<BorrowingRecord[], Error>>;
   findById(id: number): Promise<Result<BorrowingRecord | null, Error>>;
   findByMember(memberId: number): Promise<Result<MemberBorrowingStatus, Error>>;
-  findByBook(bookId: number): Promise<Result<BorrowingRecord[], Error>>;
-  getOverdueRecords(): Promise<Result<BorrowingRecord[], Error>>;
-  getStatistics(): Promise<Result<BorrowingStatistics, Error>>;
 }

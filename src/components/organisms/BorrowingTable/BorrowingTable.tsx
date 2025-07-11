@@ -1,4 +1,3 @@
-//src/components/organisms/BorrowingTable/BorrowingTable.tsx
 import React, { useState } from 'react';
 import { BorrowingRecord, BorrowingStatus } from '../../../domain/entities/BorrowingRecord';
 import { BorrowingFilters as BorrowingFiltersType, BorrowingSorting } from '../../../domain/dtos/BorrowingDto';

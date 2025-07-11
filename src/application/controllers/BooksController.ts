@@ -1,4 +1,3 @@
-//src/application/controllers/BooksController.ts
 import { ControllerResult } from '../../shared/interfaces/common';
 import { INavigationService, INotificationService } from '../../shared/interfaces/services';
 import { BookService } from '../../domain/services/Book/BookService';
@@ -133,7 +132,11 @@ export class BooksController {
     }
   }
 
-  // Remove handleSearchBooks since we're removing search functionality
+  // BooksController class
+  handleBorrowBook(book: Book): void {
+    console.log('BooksController: Navigating to borrow book:', book.bookId, book.title);
+    this.navigationService.navigateToBorrowBook(book.bookId);
+  }
 
   // Navigation helpers
   handleViewBook(book: Book): void {
@@ -142,7 +145,6 @@ export class BooksController {
 
   handleNavigateToAddBook(): void {
     this.navigationService.navigateToBooks();
-    // The specific routing to /books/add will be handled by the navigation service
   }
 
   handleNavigateToBooks(): void {

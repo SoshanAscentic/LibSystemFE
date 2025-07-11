@@ -8,7 +8,7 @@ export interface INavigationService {
   navigateToLogin(): void;
   navigateToRegister(): void;
   
-  navigateToBorrowBook(): void;
+  navigateToBorrowBook(bookId?: number): void; 
   navigateToReturnBook(): void;
   
   goBack(): void;

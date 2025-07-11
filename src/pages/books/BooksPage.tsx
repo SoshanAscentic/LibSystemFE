@@ -66,9 +66,16 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
     setModal({ type: 'add' });
   };
 
+  // Replace the existing handleBookBorrow function with this:
   const handleBookBorrow = (book: Book) => {
-    // Will be implemented in Phase 6
-    controller.handleNavigateToBooks();
+    // Check permission before allowing borrow
+    if (!permissions.canBorrow) {
+      console.warn('User attempted to borrow book without permission');
+      return;
+    }
+    
+    console.log('BooksPage: Borrowing book:', book.title);
+    controller.handleBorrowBook(book);
   };
 
   const handleCreateBook = async (data: CreateBookDto) => {

@@ -1,9 +1,9 @@
 import { INavigationService } from '../../shared/interfaces/services';
 
 export class NavigationServiceImpl implements INavigationService {
-  private navigate: (path: string | number) => void;
+  private navigate: (path: string | number, options?: { state?: any }) => void;
 
-  constructor(navigate: (path: string | number) => void) {
+  constructor(navigate: (path: string | number, options?: { state?: any }) => void) {
     this.navigate = navigate;
   }
 
@@ -35,9 +35,13 @@ export class NavigationServiceImpl implements INavigationService {
     this.navigate('/register');
   }
 
-  // Updated borrowing navigation methods - removed dashboard
-  navigateToBorrowBook(): void {
-    this.navigate('/borrowing/borrow');
+  // Updated to support pre-selecting a book
+  navigateToBorrowBook(bookId?: number): void {
+    if (bookId) {
+      this.navigate('/borrowing/borrow', { state: { preSelectedBookId: bookId } });
+    } else {
+      this.navigate('/borrowing/borrow');
+    }
   }
 
   navigateToReturnBook(): void {

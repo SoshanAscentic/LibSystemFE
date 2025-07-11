@@ -1,4 +1,3 @@
-//src/presentation/hooks/Members/useMembers.ts - Fixed version
 import { useState, useEffect, useRef } from 'react';
 import { Member } from '../../../domain/entities/Member';
 import { MemberFilters } from '../../../domain/valueObjects/MemberFilters';
@@ -11,14 +10,17 @@ interface UseMembersResult {
   refresh: () => void;
 }
 
-export const useMembers = (filters?: MemberFilters): UseMembersResult => {
+export const useMembers = (filters?: MemberFilters | null): UseMembersResult => {
   const [members, setMembers] = useState<Member[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Changed default to false
   const [error, setError] = useState<string | null>(null);
   
   const controller = useMembersController();
   const filtersRef = useRef(filters);
   const hasLoadedRef = useRef(false);
+
+  // If filters is null, don't load anything
+  const shouldLoad = filters !== null;
 
   // Deep comparison for filters to prevent unnecessary re-renders
   const filtersChanged = useRef(false);
@@ -28,6 +30,14 @@ export const useMembers = (filters?: MemberFilters): UseMembersResult => {
   }
 
   const loadMembers = async () => {
+    if (!shouldLoad) {
+      console.log('useMembers: Skipping load (filters is null)');
+      setMembers([]);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
     console.log('useMembers: Loading members with filters:', filters);
     setIsLoading(true);
     setError(null);
@@ -53,12 +63,18 @@ export const useMembers = (filters?: MemberFilters): UseMembersResult => {
   };
 
   useEffect(() => {
-    // Only load if filters changed or haven't loaded yet
-    if (!hasLoadedRef.current || filtersChanged.current) {
+    // Only load if shouldLoad and (filters changed or haven't loaded yet)
+    if (shouldLoad && (!hasLoadedRef.current || filtersChanged.current)) {
       filtersChanged.current = false;
       loadMembers();
+    } else if (!shouldLoad) {
+      // Clear data if we shouldn't load
+      setMembers([]);
+      setIsLoading(false);
+      setError(null);
+      hasLoadedRef.current = false;
     }
-  }, [filters]); // Only depend on filters
+  }, [shouldLoad, filters]); // Depend on shouldLoad and filters
 
   return {
     members,

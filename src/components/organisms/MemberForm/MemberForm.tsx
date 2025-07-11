@@ -50,10 +50,23 @@ interface MemberFormProps {
   className?: string;
 }
 
+// Better descriptions for member types
 const memberTypeOptions = [
-  { value: '0', label: 'Regular Member', description: '' },
-  { value: '1', label: 'Minor Staff', description: '' },
-  { value: '2', label: 'Management Staff', description: '' }
+  { 
+    value: '0', 
+    label: 'Regular Member', 
+    description: 'Standard library member with borrowing privileges' 
+  },
+  { 
+    value: '1', 
+    label: 'Minor Staff', 
+    description: 'Staff member with limited administrative access' 
+  },
+  { 
+    value: '2', 
+    label: 'Management Staff', 
+    description: 'Senior staff with full management privileges' 
+  }
 ];
 
 export const MemberForm: React.FC<MemberFormProps> = ({
@@ -78,22 +91,32 @@ export const MemberForm: React.FC<MemberFormProps> = ({
       email: '',
       password: '',
       confirmPassword: '',
-      memberType: '0'
+      memberType: '0'  // Default to Regular Member
     },
     mode: 'onChange'
   });
 
   const watchedMemberType = watch('memberType');
 
+  // Ensure memberType is properly converted to number
   const handleFormSubmit = (data: MemberFormData) => {
+    console.log('MemberForm: Form data before submission:', data);
+    
     const submitData: RegisterMemberDto = {
       firstName: data.firstName.trim(),
       lastName: data.lastName.trim(),
       email: data.email.trim().toLowerCase(),
       password: data.password,
       confirmPassword: data.confirmPassword,
-      memberType: parseInt(data.memberType, 10)
+      memberType: parseInt(data.memberType, 10)  // Ensure proper conversion to number
     };
+
+    console.log('MemberForm: Final submission data:', {
+      ...submitData,
+      password: '[HIDDEN]',
+      confirmPassword: '[HIDDEN]',
+      memberType: submitData.memberType  // Log the actual number
+    });
 
     onSubmit(submitData);
   };
@@ -123,6 +146,7 @@ export const MemberForm: React.FC<MemberFormProps> = ({
                   error={errors.firstName?.message}
                   leftIcon={<User className="h-4 w-4" />}
                   placeholder="Enter first name"
+                  disabled={isLoading}
                 />
               </div>
               
@@ -136,6 +160,7 @@ export const MemberForm: React.FC<MemberFormProps> = ({
                   error={errors.lastName?.message}
                   leftIcon={<User className="h-4 w-4" />}
                   placeholder="Enter last name"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -151,6 +176,7 @@ export const MemberForm: React.FC<MemberFormProps> = ({
                 error={errors.email?.message}
                 leftIcon={<Mail className="h-4 w-4" />}
                 placeholder="Enter email address"
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -171,6 +197,7 @@ export const MemberForm: React.FC<MemberFormProps> = ({
                   error={errors.password?.message}
                   leftIcon={<Lock className="h-4 w-4" />}
                   placeholder="Enter password"
+                  disabled={isLoading}
                 />
               </div>
               
@@ -185,12 +212,13 @@ export const MemberForm: React.FC<MemberFormProps> = ({
                   error={errors.confirmPassword?.message}
                   leftIcon={<Lock className="h-4 w-4" />}
                   placeholder="Confirm password"
+                  disabled={isLoading}
                 />
               </div>
             </div>
           </div>
 
-          {/* Member Type */}
+          {/* Member Type - Better handling and descriptions */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-gray-900">Member Type</h3>
             
@@ -200,7 +228,11 @@ export const MemberForm: React.FC<MemberFormProps> = ({
               </Label>
               <Select
                 value={watchedMemberType}
-                onValueChange={(value) => setValue('memberType', value)}
+                onValueChange={(value) => {
+                  console.log('MemberForm: Selected member type:', value);
+                  setValue('memberType', value, { shouldValidate: true });
+                }}
+                disabled={isLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select member type" />
@@ -208,8 +240,8 @@ export const MemberForm: React.FC<MemberFormProps> = ({
                 <SelectContent>
                   {memberTypeOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
+                      <div className="flex items-start gap-2 py-1">
+                        <Users className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         <div>
                           <div className="font-medium">{option.label}</div>
                           <div className="text-sm text-gray-500">{option.description}</div>
@@ -222,6 +254,13 @@ export const MemberForm: React.FC<MemberFormProps> = ({
               {errors.memberType && (
                 <p className="text-sm text-red-600 mt-1">{errors.memberType.message}</p>
               )}
+              
+              {/* Debug info for development */}
+              {process.env.NODE_ENV === 'development' && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Selected: {watchedMemberType} ({memberTypeOptions.find(opt => opt.value === watchedMemberType)?.label})
+                </p>
+              )}
             </div>
           </div>
 
@@ -232,7 +271,7 @@ export const MemberForm: React.FC<MemberFormProps> = ({
               disabled={!isValid || isLoading}
               className="flex-1"
             >
-              {isLoading ? 'Loading...' : submitText}
+              {isLoading ? 'Registering...' : submitText}
             </Button>
             <Button
               type="button"

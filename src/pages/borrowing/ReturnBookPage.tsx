@@ -32,27 +32,49 @@ export const ReturnBookPage: React.FC<ReturnBookPageProps> = ({ controller }) =>
   const [condition, setCondition] = useState('Good');
   const [notes, setNotes] = useState('');
 
-  // Check if user can select other members - memoized
+  // Check if user can select other members (only staff can)
   const canSelectOtherMembers = useMemo(() => 
-    user?.role === 'ManagementStaff' || user?.role === 'Administrator', 
+    user?.role === 'MinorStaff' || user?.role === 'ManagementStaff' || user?.role === 'Administrator', 
     [user?.role]
   );
 
-  // Data hooks
-  const { members, isLoading: membersLoading } = useMembers();
+  // Data hooks - only load members if user can select other members
+  const { members, isLoading: membersLoading } = useMembers(canSelectOtherMembers ? undefined : null);
   
-  // Find current user as member - memoized
-  const currentUserAsMember = useMemo(() => 
-    members.find(member => member.email === user?.email), 
-    [members, user?.email]
-  );
+  // Create current user as member object for regular members
+  const currentUserAsMember = useMemo(() => {
+    if (!user) return null;
+
+    if (canSelectOtherMembers) {
+      // For staff, find them in the members list
+      return members.find(member => member.email === user.email);
+    } else {
+      // For regular members, create member object from auth user data
+      return {
+        memberId: user.userId, // Assuming userId corresponds to memberId
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: user.fullName,
+        email: user.email,
+        memberType: 'RegularMember' as any,
+        role: 'Member' as any,
+        isActive: user.isActive,
+        registrationDate: new Date(user.createdAt),
+        borrowedBooksCount: 0,
+        canBorrowBooks: true,
+        canViewBooks: true,
+        canViewMembers: false,
+        canManageBooks: false,
+      } as Member;
+    }
+  }, [canSelectOtherMembers, members, user]);
   
-  // Set default member
+  // Set default member (for regular members, automatically select themselves)
   useEffect(() => {
-    if (!canSelectOtherMembers && currentUserAsMember && !selectedMember) {
+    if (currentUserAsMember && !selectedMember) {
       setSelectedMember(currentUserAsMember);
     }
-  }, [canSelectOtherMembers, currentUserAsMember, selectedMember]);
+  }, [currentUserAsMember, selectedMember]);
 
   // Get member's borrowing status and borrowed books
   const { status: memberStatus, isLoading: statusLoading } = useMemberBorrowingStatus(selectedMember?.memberId);
@@ -136,7 +158,7 @@ export const ReturnBookPage: React.FC<ReturnBookPageProps> = ({ controller }) =>
   );
 
   // Show loading state
-  if (membersLoading) {
+  if ((canSelectOtherMembers && membersLoading)) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -158,11 +180,22 @@ export const ReturnBookPage: React.FC<ReturnBookPageProps> = ({ controller }) =>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Return a Book</h1>
+          {!canSelectOtherMembers && selectedMember && (
+            <p className="text-sm text-gray-600">
+              Returning for: {selectedMember.fullName}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Member Selection (if authorized) */}
+      <div className={cn(
+        "grid gap-6",
+        canSelectOtherMembers ? "grid-cols-1 lg:grid-cols-3" : "grid-cols-1"
+      )}>
+        {/* Member Selection (only for staff) */}
         {canSelectOtherMembers && (
           <Card>
             <CardHeader>
@@ -206,14 +239,14 @@ export const ReturnBookPage: React.FC<ReturnBookPageProps> = ({ controller }) =>
         )}
 
         {/* Borrowed Books Selection */}
-        <Card className={canSelectOtherMembers ? "lg:col-span-2" : "lg:col-span-3"}>
+        <Card className={canSelectOtherMembers ? "lg:col-span-2" : "col-span-1"}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <RotateCcw className="w-5 h-5" />
               Select Book to Return
               {selectedMember && (
                 <span className="text-sm font-normal text-gray-600">
-                  for {selectedMember.fullName}
+                  {canSelectOtherMembers ? `for ${selectedMember.fullName}` : ''}
                 </span>
               )}
             </CardTitle>
@@ -227,7 +260,7 @@ export const ReturnBookPage: React.FC<ReturnBookPageProps> = ({ controller }) =>
               <LoadingState message="Loading borrowed books..." />
             ) : activeBorrowings.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                No borrowed books found for this member
+                No borrowed books found {canSelectOtherMembers ? 'for this member' : 'for you'}
               </div>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">

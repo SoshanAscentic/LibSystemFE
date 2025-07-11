@@ -35,10 +35,8 @@ import { MemberDetailsPageContainer } from './presentation/components/Member/Mem
 import { CreateMemberPageContainer } from './presentation/components/Member/CreateMemberPageContainer';
 
 // Borrowing Page Containers
-import { BorrowingPageContainer } from './presentation/components/BorrowingPageContainer';
 import { BorrowBookPageContainer } from './presentation/components/Borrow/BorrowBookPageContainer';
 import { ReturnBookPageContainer } from './presentation/components/Borrow/ReturnBookPageContainer';
-import { BorrowingHistoryPageContainer } from './presentation/components/BorrowingHistoryPageContainer';
 
 // Loading Component
 import { LoadingState } from './components/molecules/LoadingState';
@@ -273,7 +271,14 @@ function AppWithContainer() {
     const configureDeps = async () => {
       try {
         console.log('Configuring dependencies...');
-        configureDependencies(container, (path: string | number) => navigate(String(path)));
+        // Update this line to support state parameter
+        configureDependencies(container, (path: string | number, options?: { state?: any }) => {
+          if (typeof path === 'string' && options?.state) {
+            navigate(path, options);
+          } else {
+            navigate(String(path));
+          }
+        });
         
         console.log('Dependencies configured successfully');
         setIsConfigured(true);

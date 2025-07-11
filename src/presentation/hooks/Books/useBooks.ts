@@ -66,3 +66,5 @@ export const useBooks = (filters?: BookFilters): UseBooksResult => {
     refresh: loadBooks
   };
 };
+
+export type { BookFilters };

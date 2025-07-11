@@ -14,29 +14,64 @@ interface MemberCardProps {
   className?: string;
 }
 
-const getMemberTypeColor = (memberType: string) => {
-  switch (memberType.toLowerCase()) {
+// Updated to handle Administrator type
+const getMemberTypeColor = (memberType: string, role?: string) => {
+  // Check role first, then memberType
+  const typeToCheck = role || memberType;
+  
+  switch (typeToCheck.toLowerCase()) {
     case 'regularmember':
+    case 'member':
       return 'bg-blue-100 text-blue-800 border-blue-200';
     case 'minorstaff':
       return 'bg-amber-100 text-amber-800 border-amber-200';
     case 'managementstaff':
       return 'bg-purple-100 text-purple-800 border-purple-200';
+    case 'administrator':
+      return 'bg-red-100 text-red-800 border-red-200';
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 };
 
-const getMemberTypeLabel = (memberType: string) => {
-  switch (memberType.toLowerCase()) {
+// Updated to handle Administrator type and prioritize role
+const getMemberTypeLabel = (memberType: string, role?: string) => {
+  // Check role first, then memberType for proper display
+  const typeToCheck = role || memberType;
+  
+  switch (typeToCheck.toLowerCase()) {
     case 'regularmember':
+    case 'member':
       return 'Regular Member';
     case 'minorstaff':
       return 'Minor Staff';
     case 'managementstaff':
       return 'Management Staff';
+    case 'administrator':
+      return 'Administrator';
     default:
       return memberType;
+  }
+};
+
+// Calculate actual days as member
+const calculateDaysAsMember = (registrationDate: Date): number => {
+  try {
+    const now = new Date();
+    const regDate = new Date(registrationDate);
+    
+    // Validate the date
+    if (isNaN(regDate.getTime())) {
+      console.warn('Invalid registration date:', registrationDate);
+      return 0;
+    }
+    
+    const diffTime = now.getTime() - regDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  } catch (error) {
+    console.error('Error calculating membership days:', error);
+    return 0;
   }
 };
 
@@ -50,10 +85,18 @@ export const MemberCard: React.FC<MemberCardProps> = ({
   const isDetailed = variant === 'detailed';
 
   // Debug logging
-  console.log('MemberCard: Rendering member:', member);
+  console.log('MemberCard: Rendering member:', {
+    memberId: member.memberId,
+    role: member.role,
+    memberType: member.memberType,
+    registrationDate: member.registrationDate
+  });
 
   // Safely get member display name
   const displayName = member.fullName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown Member';
+  
+  // Calculate actual days as member
+  const daysAsMember = calculateDaysAsMember(member.registrationDate);
 
   return (
     <Card className={cn(
@@ -89,11 +132,12 @@ export const MemberCard: React.FC<MemberCardProps> = ({
         {/* Member Details */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Use role-aware type display */}
             <Badge 
               variant="outline" 
-              className={getMemberTypeColor(member.memberType)}
+              className={getMemberTypeColor(member.memberType, member.role)}
             >
-              {getMemberTypeLabel(member.memberType)}
+              {getMemberTypeLabel(member.memberType, member.role)}
             </Badge>
             <Badge 
               variant={member.isActive ? 'default' : 'destructive'}
@@ -120,12 +164,6 @@ export const MemberCard: React.FC<MemberCardProps> = ({
               </div>
             )}
           </div>
-
-          {!isCompact && (
-            <p className="text-xs text-gray-500">
-              Member since {formatDate(member.registrationDate)}
-            </p>
-          )}
         </div>
 
         {/* Actions */}

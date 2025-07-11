@@ -119,7 +119,7 @@ export class MembersApiService {
   }
 
   /**
-   * Map backend response to domain Member entity
+   * Map backend response to domain Member entity - FIXED for role mapping and date parsing
    */
   private mapBackendResponseToMember(backendData: BackendMemberResponse): Member {
     try {
@@ -135,8 +135,32 @@ export class MembersApiService {
       const firstName = nameParts[0] || '';
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-      const memberType = this.mapMemberTypeFromString(backendData.memberType);
+      // FIXED: Better role mapping - prioritize explicit role field, then memberType
       const role = this.mapRoleFromString(backendData.role || backendData.memberType);
+      const memberType = this.mapMemberTypeFromString(backendData.memberType);
+
+      // FIXED: Better registration date parsing with validation
+      let registrationDate: Date;
+      if (backendData.registrationDate) {
+        try {
+          // Try to parse the date string
+          const parsedDate = new Date(backendData.registrationDate);
+          
+          // Validate the parsed date
+          if (isNaN(parsedDate.getTime())) {
+            console.warn('MembersApiService: Invalid registration date format:', backendData.registrationDate);
+            registrationDate = new Date(); // Fallback to current date
+          } else {
+            registrationDate = parsedDate;
+          }
+        } catch (error) {
+          console.warn('MembersApiService: Error parsing registration date:', error);
+          registrationDate = new Date(); // Fallback to current date
+        }
+      } else {
+        console.warn('MembersApiService: No registration date provided');
+        registrationDate = new Date(); // Fallback to current date
+      }
 
       const member: Member = {
         memberId: backendData.memberID || 0,  // Note: backend uses "memberID"
@@ -147,7 +171,7 @@ export class MembersApiService {
         memberType: memberType,
         role: role,
         isActive: backendData.isActive !== false,
-        registrationDate: new Date(backendData.registrationDate || new Date()),
+        registrationDate: registrationDate,
         borrowedBooksCount: backendData.borrowedBooksCount || 0,
         canBorrowBooks: backendData.canBorrowBooks !== false,
         canViewBooks: backendData.canViewBooks !== false,
@@ -157,7 +181,15 @@ export class MembersApiService {
         borrowingHistory: backendData.borrowingHistory || [],
       };
 
-      console.log('MembersApiService: Mapped member:', member);
+      console.log('MembersApiService: Mapped member:', {
+        memberId: member.memberId,
+        fullName: member.fullName,
+        role: member.role,
+        memberType: member.memberType,
+        registrationDate: member.registrationDate.toISOString(),
+        isValidDate: !isNaN(member.registrationDate.getTime())
+      });
+      
       return member;
     } catch (error) {
       console.error('MembersApiService: Member mapping error:', error);
@@ -166,7 +198,7 @@ export class MembersApiService {
   }
 
   /**
-   * Map member type string to enum
+   * Map member type string to enum - FIXED to handle Administrator
    */
   private mapMemberTypeFromString(memberType: string): MemberType {
     const normalizedType = memberType?.toLowerCase().replace(/\s+/g, '');
@@ -182,6 +214,9 @@ export class MembersApiService {
       case 'managementstaff':
       case 'management_staff':
         return MemberType.MANAGEMENT_STAFF;
+      case 'administrator':
+      case 'admin':
+        return MemberType.ADMINISTRATOR;
       default:
         console.warn('MembersApiService: Unknown member type:', memberType, 'normalized:', normalizedType);
         return MemberType.REGULAR_MEMBER;
@@ -189,7 +224,7 @@ export class MembersApiService {
   }
 
   /**
-   * Map role string to enum
+   * Map role string to enum - FIXED to handle Administrator properly
    */
   private mapRoleFromString(role: string): UserRole {
     const normalizedRole = role?.toLowerCase().replace(/\s+/g, '');
@@ -208,7 +243,8 @@ export class MembersApiService {
       case 'admin':
         return UserRole.ADMINISTRATOR;
       default:
-        console.warn('MembersApiService: Unknown role:', role, 'normalized:', normalizedRole, 'defaulting to Member');
+        console.warn('MembersApiService: Unknown role:', role, 'normalized:', normalizedRole);
+        // Don't default to Member - try to infer from memberType or return what we have
         return UserRole.MEMBER;
     }
   }

@@ -79,10 +79,8 @@ export const BookDetailsPage: React.FC<BookDetailsPageProps> = ({ bookId, contro
       {/* Book Details */}
       <BookDetails
         book={book}
-        onEdit={permissions.canEdit ? handleEdit : undefined}
         onDelete={permissions.canDelete ? handleDelete : undefined}
         onBorrow={permissions.canBorrow ? handleBorrow : undefined}
-        canEdit={permissions.canEdit}
         canDelete={permissions.canDelete}
         canBorrow={permissions.canBorrow}
       />
