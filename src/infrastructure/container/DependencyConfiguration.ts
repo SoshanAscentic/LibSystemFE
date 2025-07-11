@@ -46,21 +46,22 @@ import { BorrowingController } from '../../application/controllers/BorrowingCont
 
 export const configureDependencies = (
   container: Container, 
-  navigate: (path: string | number, options?: { state?: any }) => void // Updated signature
+  navigate: (path: string | number, options?: { state?: any }) => void
 ): void => {
-  console.log('Configuring dependencies...');
+  console.log('🔧 Configuring dependencies...');
   try {
     // Infrastructure layer - API and External Services
-    console.log('Registering infrastructure services...');
+    console.log('📡 Registering infrastructure services...');
     container.registerSingleton(SERVICE_KEYS.API_CLIENT, () => {
       console.log('Creating ApiClient');
       return new ApiClient();
     });
     
-    container.registerSingleton(SERVICE_KEYS.AUTH_API_SERVICE, () => {
-      console.log('Creating AuthApiService');
-      return new AuthApiService(container.resolve(SERVICE_KEYS.API_CLIENT));
-    });
+    // 🔐 REMOVED: AuthApiService (no longer needed with direct fetch calls)
+    // container.registerSingleton(SERVICE_KEYS.AUTH_API_SERVICE, () => {
+    //   console.log('Creating AuthApiService');
+    //   return new AuthApiService(container.resolve(SERVICE_KEYS.API_CLIENT));
+    // });
 
     container.registerSingleton(SERVICE_KEYS.MEMBERS_API_SERVICE, () => {
       console.log('Creating MembersApiService');
@@ -88,64 +89,65 @@ export const configureDependencies = (
     });
 
     // UI Services
-    console.log('Registering UI services...');
+    console.log('🎨 Registering UI services...');
     container.registerSingleton(SERVICE_KEYS.NAVIGATION_SERVICE, () => {
       console.log('🧭 Creating NavigationService');
       return new NavigationServiceImpl(navigate); 
     });
 
     container.registerSingleton(SERVICE_KEYS.NOTIFICATION_SERVICE, () => {
-      console.log('Creating NotificationService');
+      console.log('📢 Creating NotificationService');
       return new NotificationService();
     });
 
     // Domain Validation Services
-    console.log('Registering validation services...');
+    console.log('✅ Registering validation services...');
     container.registerSingleton(SERVICE_KEYS.AUTH_VALIDATION_SERVICE, () => {
-      console.log('Creating AuthValidationService');
+      console.log('🔐 Creating AuthValidationService');
       return new AuthValidationService();
     });
 
     container.registerSingleton(SERVICE_KEYS.BOOK_VALIDATION_SERVICE, () => {
-      console.log('Creating BookValidationService');
+      console.log('📚 Creating BookValidationService');
       return new BookValidationService();
     });
 
     container.registerSingleton(SERVICE_KEYS.MEMBER_VALIDATION_SERVICE, () => {
-      console.log('Creating MemberValidationService');
+      console.log('👥 Creating MemberValidationService');
       return new MemberValidationService();
     });
 
     container.registerSingleton(SERVICE_KEYS.BORROWING_VALIDATION_SERVICE, () => {
-      console.log('Creating BorrowingValidationService');
+      console.log('📋 Creating BorrowingValidationService');
       return new BorrowingValidationService();
     });
 
     // Domain Services
-    console.log('Registering domain services...');
+    console.log('🏢 Registering domain services...');
+    
+    // 🔐 FIXED: AuthenticationService now only needs AuthValidationService
     container.registerSingleton(SERVICE_KEYS.AUTHENTICATION_SERVICE, () => {
-      console.log('Creating AuthenticationService');
-      const authApiService = container.resolve(SERVICE_KEYS.AUTH_API_SERVICE) as AuthApiService;
+      console.log('🔐 Creating SECURE AuthenticationService');
       const authValidationService = container.resolve(SERVICE_KEYS.AUTH_VALIDATION_SERVICE) as AuthValidationService;
-      return new AuthenticationService(authApiService, authValidationService);
+      return new AuthenticationService(authValidationService); // FIXED: Only validation service needed
     });
 
     container.registerSingleton(SERVICE_KEYS.BOOK_SERVICE, () => {
-      console.log('Creating BookService');
+      console.log('📚 Creating BookService');
       const bookRepository = container.resolve(SERVICE_KEYS.BOOK_REPOSITORY) as ApiBookRepository;
       const bookValidationService = container.resolve(SERVICE_KEYS.BOOK_VALIDATION_SERVICE) as BookValidationService;
       return new BookService(bookRepository, bookValidationService);
     });
 
     container.registerSingleton(SERVICE_KEYS.MEMBER_SERVICE, () => {
-      console.log('Creating MemberService');
+      console.log('👥 Creating MemberService');
       const memberRepository = container.resolve(SERVICE_KEYS.MEMBER_REPOSITORY) as ApiMemberRepository;
       const memberValidationService = container.resolve(SERVICE_KEYS.MEMBER_VALIDATION_SERVICE) as MemberValidationService;
       return new MemberService(memberRepository, memberValidationService);
     });
 
     container.registerSingleton(SERVICE_KEYS.BORROWING_SERVICE, () => {
-      console.log('Creating BorrowingService');
+      console.log('📋 Creating BorrowingService');
       const borrowingRepository = container.resolve(SERVICE_KEYS.BORROWING_REPOSITORY) as ApiBorrowingRepository;
       const borrowingValidationService = container.resolve(SERVICE_KEYS.BORROWING_VALIDATION_SERVICE) as BorrowingValidationService;
       return new BorrowingService(borrowingRepository, borrowingValidationService);
@@ -205,7 +207,7 @@ export const configureDependencies = (
     // Application Controllers - Register as singletons to prevent re-creation
     console.log('🎮 Registering controllers...');
     container.registerSingleton(SERVICE_KEYS.BOOKS_CONTROLLER, () => {
-      console.log('Creating BooksController');
+      console.log('📚 Creating BooksController');
       return new BooksController(
         container.resolve(SERVICE_KEYS.BOOK_SERVICE),
         container.resolve(SERVICE_KEYS.NAVIGATION_SERVICE),
@@ -214,7 +216,7 @@ export const configureDependencies = (
     });
 
     container.registerSingleton(SERVICE_KEYS.MEMBERS_CONTROLLER, () => {
-      console.log('Creating MembersController');
+      console.log('👥 Creating MembersController');
       return new MembersController(
         container.resolve(SERVICE_KEYS.GET_MEMBERS_USE_CASE),
         container.resolve(SERVICE_KEYS.GET_MEMBER_BY_ID_USE_CASE),
@@ -225,7 +227,7 @@ export const configureDependencies = (
     });
 
     container.registerSingleton(SERVICE_KEYS.AUTH_CONTROLLER, () => {
-      console.log('Creating AuthController');
+      console.log('🔐 Creating AuthController');
       return new AuthController(
         container.resolve(SERVICE_KEYS.AUTHENTICATION_SERVICE),
         container.resolve(SERVICE_KEYS.NAVIGATION_SERVICE),
@@ -234,7 +236,7 @@ export const configureDependencies = (
     });
 
     container.registerSingleton(SERVICE_KEYS.BORROWING_CONTROLLER, () => {
-      console.log('Creating BorrowingController');
+      console.log('📋 Creating BorrowingController');
       return new BorrowingController(
         container.resolve(SERVICE_KEYS.BORROWING_SERVICE),
         container.resolve(SERVICE_KEYS.NAVIGATION_SERVICE),
@@ -242,11 +244,10 @@ export const configureDependencies = (
       );
     });
 
-    
-    console.log('All dependencies configured successfully');
+    console.log('✅ All dependencies configured successfully');
     
   } catch (error) {
-    console.error('Failed to configure dependencies:', error);
+    console.error('❌ Failed to configure dependencies:', error);
     throw error;
   }
 };

@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { Grid, List, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useMembers } from '../../presentation/hooks/Members/useMembers';
-import { useMemberPermissions } from '../../hooks/useMemberPermissions';
+import { useSecurePermissions, PermissionGate } from '../../hooks/useSecurePermissions'; // CHANGED
 
 type ViewMode = 'grid' | 'table';
 type ModalType = 'add' | 'view' | null;
@@ -31,8 +31,8 @@ export const MembersPage: React.FC<MembersPageProps> = ({ controller }) => {
   const [modal, setModal] = useState<ModalState>({ type: null });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Permissions - Only administrators can add members
-  const permissions = useMemberPermissions();
+  // SECURE Permissions - Server-verified (only administrators can manage members)
+  const permissions = useSecurePermissions(); // CHANGED
 
   // Data hooks
   const { members, isLoading: membersLoading, refresh: refreshMembers } = useMembers();
@@ -43,8 +43,8 @@ export const MembersPage: React.FC<MembersPageProps> = ({ controller }) => {
   };
 
   const handleMemberAdd = () => {
-    // Double-check permission before allowing add
-    if (!permissions.canAdd) {
+    // SECURITY: Double-check permission before allowing add
+    if (!permissions.canManageUsers) {
       console.warn('User attempted to add member without permission');
       return;
     }
@@ -70,25 +70,90 @@ export const MembersPage: React.FC<MembersPageProps> = ({ controller }) => {
     }
   };
 
+  // Show loading state if permissions are still being verified
+  if (permissions.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Verifying Permissions</h2>
+          <p className="text-gray-600">Checking your access rights to member management...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if permission verification failed
+  if (permissions.error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-md">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <h2 className="text-xl font-bold mb-2">Permission Error</h2>
+            <p className="text-sm">{permissions.error}</p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // SECURITY: Check if user can view members at all
+  if (!permissions.canViewBorrowing) { // Members viewing requires at least staff level
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-md">
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+            <h2 className="text-xl font-bold mb-2">Access Restricted</h2>
+            <p className="text-sm">You don't have permission to view member information.</p>
+            <p className="text-xs mt-2">Contact an administrator if you need access.</p>
+          </div>
+          <button 
+            onClick={() => window.history.back()}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Members Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">👥 Members Management</h1>
           <p className="text-gray-600 mt-1">
             View and manage library members
           </p>
+          {/* SECURITY: Show user's permission level */}
+          <div className="text-xs text-gray-500 mt-1">
+            Access Level: {permissions.canManageUsers ? '🔑 Administrator' : '👁️ View Only'}
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Add Member button - Only for administrators */}
-          {permissions.canAdd && (
+          {/* SECURE: Add Member button - Only for administrators */}
+          <PermissionGate 
+            requiredPermissions={['canManageUsers']}
+            fallback={
+              <div className="text-sm text-gray-500 italic">
+                👤 Only administrators can register new members
+              </div>
+            }
+          >
             <Button onClick={handleMemberAdd} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Register New Member
             </Button>
-          )}
+          </PermissionGate>
 
           {/* View Mode Toggle */}
           <div className="flex rounded-md border">
@@ -118,22 +183,22 @@ export const MembersPage: React.FC<MembersPageProps> = ({ controller }) => {
           members={members}
           isLoading={membersLoading}
           onMemberView={handleMemberView}
-          onAddMember={permissions.canAdd ? handleMemberAdd : undefined}
-          canAdd={permissions.canAdd}
+          onAddMember={permissions.canManageUsers ? handleMemberAdd : undefined}
+          canAdd={permissions.canManageUsers}
         />
       ) : (
         <MembersTable
           members={members}
           isLoading={membersLoading}
           onMemberView={handleMemberView}
-          onAddMember={permissions.canAdd ? handleMemberAdd : undefined}
-          canAdd={permissions.canAdd}
+          onAddMember={permissions.canManageUsers ? handleMemberAdd : undefined}
+          canAdd={permissions.canManageUsers}
         />
       )}
 
-      {/* Modals */}
+      {/* SECURE Modals with Permission Gates */}
       
-      {/* Register Member Modal */}
+      {/* Register Member Modal - Only for administrators */}
       <Dialog open={modal.type === 'add'} onOpenChange={closeModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -142,8 +207,21 @@ export const MembersPage: React.FC<MembersPageProps> = ({ controller }) => {
             </DialogTitle>
           </DialogHeader>
           
-          {/* Permission check */}
-          {permissions.canAdd ? (
+          {/* SECURE: Triple-check permissions in modal */}
+          <PermissionGate 
+            requiredPermissions={['canManageUsers']}
+            fallback={
+              <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                <div className="flex items-center">
+                  <span className="text-2xl mr-2">🔐</span>
+                  <div>
+                    <p className="text-red-600 font-medium">Access Denied</p>
+                    <p className="text-red-500 text-sm">Only administrators can register new members.</p>
+                  </div>
+                </div>
+              </div>
+            }
+          >
             <MemberForm
               onSubmit={handleRegisterMember}
               onCancel={closeModal}
@@ -151,11 +229,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({ controller }) => {
               title="Register New Member"
               submitText="Register Member"
             />
-          ) : (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-red-600">You don't have permission to register members.</p>
-            </div>
-          )}
+          </PermissionGate>
         </DialogContent>
       </Dialog>
 
@@ -166,6 +240,10 @@ export const MembersPage: React.FC<MembersPageProps> = ({ controller }) => {
             <DialogTitle className="text-2xl font-bold text-gray-900">
               {modal.member ? `${modal.member.fullName || `${modal.member.firstName || ''} ${modal.member.lastName || ''}`.trim() || 'Unknown Member'} - Member Details` : 'Member Details'}
             </DialogTitle>
+            {/* SECURITY: Show viewing permission context */}
+            <div className="text-sm text-gray-500">
+              Access: {permissions.canManageUsers ? 'Administrator View' : 'Staff View'}
+            </div>
           </DialogHeader>
           <div 
             className="flex-1 overflow-y-auto p-6" 
@@ -178,8 +256,8 @@ export const MembersPage: React.FC<MembersPageProps> = ({ controller }) => {
               <div className="max-w-7xl mx-auto">
                 <MemberDetails
                   member={modal.member}
-                  canEdit={false}
-                  canDelete={false}
+                  canEdit={false} // Editing not implemented yet
+                  canDelete={false} // Deleting not implemented yet
                 />
               </div>
             )}

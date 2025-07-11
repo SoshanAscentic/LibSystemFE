@@ -1,6 +1,5 @@
 import { ValidationResult } from '../../../shared/interfaces/common';
 import { CreateBookDto } from '../../dtos/CreateBookDto';
-import { ValidationError } from '../../../shared/types/errors';
 
 export class BookValidationService {
   validateCreateBook(data: CreateBookDto): ValidationResult {

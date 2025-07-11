@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { ConfirmDialog } from '../../components/ui/confirm-dialog';
 import { Grid, List, Plus } from 'lucide-react';
 import { useBooks } from '../../presentation/hooks/Books/useBooks';
-import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { useSecurePermissions, PermissionGate } from '../../hooks/useSecurePermissions'; // CHANGED
 import { bookToCreateBookDto } from '../../utils/bookUtils';
 
 type ViewMode = 'grid' | 'table';
@@ -34,8 +34,8 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
   const [modal, setModal] = useState<ModalState>({ type: null });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Permissions - Using actual auth context
-  const permissions = useUserPermissions();
+  // SECURE Permissions - Server-verified
+  const permissions = useSecurePermissions(); // CHANGED
 
   // Data hooks
   const { books, isLoading: booksLoading, refresh: refreshBooks } = useBooks(filters);
@@ -58,7 +58,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
   };
 
   const handleBookAdd = () => {
-    // Double-check permission before allowing add
+    // SECURITY: Double-check permission before allowing add (server already verified)
     if (!permissions.canAdd) {
       console.warn('User attempted to add book without permission');
       return;
@@ -66,9 +66,8 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
     setModal({ type: 'add' });
   };
 
-  // Replace the existing handleBookBorrow function with this:
   const handleBookBorrow = (book: Book) => {
-    // Check permission before allowing borrow
+    // SECURITY: Check permission before allowing borrow
     if (!permissions.canBorrow) {
       console.warn('User attempted to borrow book without permission');
       return;
@@ -99,12 +98,11 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
     try {
       console.log('Deleting book:', modal.book.bookId, modal.book.title);
       
-      // Attempt the delete
       const result = await controller.handleDeleteBook(modal.book);
       
       console.log('Delete result:', result);
       
-      // Always close modal and refresh - the controller handles notifications
+      // Always close modal and refresh
       setModal({ type: null });
       
       // Force refresh the books list
@@ -114,7 +112,6 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
       
     } catch (error) {
       console.error('Unexpected error during delete:', error);
-      // Only show error notification for unexpected errors
       setModal({ type: null });
       await refreshBooks();
     } finally {
@@ -128,6 +125,39 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
     }
   };
 
+  // Show loading state if permissions are still being verified
+  if (permissions.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Verifying Permissions</h2>
+          <p className="text-gray-600">Checking your access rights...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if permission verification failed
+  if (permissions.error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-md">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <h2 className="text-xl font-bold mb-2">Permission Error</h2>
+            <p className="text-sm">{permissions.error}</p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -140,13 +170,13 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Conditional Add Book button in header */}
-          {permissions.canAdd && (
+          {/* SECURE: Conditional Add Book button with server-verified permissions */}
+          <PermissionGate requiredPermissions={['canAdd']}>
             <Button onClick={handleBookAdd} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Add Book
             </Button>
-          )}
+          </PermissionGate>
 
           {/* View Mode Toggle */}
           <div className="flex rounded-md border">
@@ -201,17 +231,24 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
         />
       )}
 
-      {/* Modals */}
+      {/* SECURE Modals with Permission Gates */}
       
-      {/* Add Book Modal */}
+      {/* Add Book Modal - Only render if user has permission */}
       <Dialog open={modal.type === 'add'} onOpenChange={closeModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add New Book</DialogTitle>
           </DialogHeader>
           
-          {/* Permission check - Don't render add form if user doesn't have permission */}
-          {permissions.canAdd && (
+          {/* SECURE: Double-check permissions in modal */}
+          <PermissionGate 
+            requiredPermissions={['canAdd']}
+            fallback={
+              <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-red-600">You don't have permission to add books.</p>
+              </div>
+            }
+          >
             <BookForm
               onSubmit={handleCreateBook}
               onCancel={closeModal}
@@ -219,18 +256,11 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
               title="Add New Book"
               submitText="Add Book"
             />
-          )}
-          
-          {/* Show error if user somehow gets to add modal without permission */}
-          {!permissions.canAdd && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-red-600">You don't have permission to add books.</p>
-            </div>
-          )}
+          </PermissionGate>
         </DialogContent>
       </Dialog>
 
-     {/* View Book Modal */}
+      {/* View Book Modal */}
       <Dialog open={modal.type === 'view'} onOpenChange={closeModal}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
@@ -250,21 +280,23 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Modal */}
-      <ConfirmDialog
-        open={modal.type === 'delete'}
-        onOpenChange={(open) => !open && closeModal()}
-        onConfirm={handleConfirmDelete}
-        title="Delete Book"
-        description={
-          modal.book
-            ? `Are you sure you want to delete "${modal.book.title}" by ${modal.book.author}? This action cannot be undone.`
-            : ''
-        }
-        confirmText="Delete Book"
-        isLoading={isSubmitting}
-        variant="destructive"
-      />
+      {/* SECURE Delete Confirmation Modal */}
+      <PermissionGate requiredPermissions={['canDelete']}>
+        <ConfirmDialog
+          open={modal.type === 'delete'}
+          onOpenChange={(open) => !open && closeModal()}
+          onConfirm={handleConfirmDelete}
+          title="Delete Book"
+          description={
+            modal.book
+              ? `Are you sure you want to delete "${modal.book.title}" by ${modal.book.author}? This action cannot be undone.`
+              : ''
+          }
+          confirmText="Delete Book"
+          isLoading={isSubmitting}
+          variant="destructive"
+        />
+      </PermissionGate>
     </div>
   );
 };

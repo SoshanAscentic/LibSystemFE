@@ -1,7 +1,5 @@
 import { Result } from '../../../shared/types/Result';
 import { BusinessError, ValidationError } from '../../../shared/types/errors';
-import { AuthApiService, AuthResponse, UserInfo, LoginRequest, RegisterRequest, ChangePasswordRequest } from '../../../infrastructure/api/AuthApiService';
-import { TokenService, DecodedToken } from '../../../infrastructure/services/TokenService';
 import { AuthValidationService } from './AuthValidationService';
 
 export interface AuthUser {
@@ -35,130 +33,125 @@ export interface AuthenticationResult {
   isAuthenticated: boolean;
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export class AuthenticationService {
+  private baseURL: string;
+
   constructor(
-    private authApiService: AuthApiService,
     private validationService: AuthValidationService
-  ) {}
+  ) {
+    // 🔧 FIX: Use proper backend URL
+    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7033';
+    console.log('🔗 AuthenticationService: Using API base URL:', this.baseURL);
+  }
 
   /**
-   * Login user with credentials - Updated for backend response handling
+   * SECURE Login - With fallback to old endpoint if secure endpoint not available
    */
   async login(credentials: LoginCredentials): Promise<Result<AuthenticationResult, BusinessError>> {
     try {
-      console.log('AuthenticationService: Starting login process for:', credentials.email);
+      console.log('🔐 AuthenticationService: Starting SECURE login process for:', credentials.email);
       
       // Validate input
       const validation = this.validationService.validateLoginCredentials(credentials);
       if (!validation.isValid) {
-        console.log('AuthenticationService: Validation failed:', validation.errors);
+        console.log('❌ AuthenticationService: Validation failed:', validation.errors);
         return Result.failure(
           new ValidationError(validation.errors.join(', '), 'credentials', credentials)
         );
       }
-      console.log('AuthenticationService: Credentials validation passed');
 
-      // Prepare API request
-      const loginRequest: LoginRequest = {
+      const loginRequest = {
         email: credentials.email.trim().toLowerCase(),
-        password: credentials.password
+        password: credentials.password,
+        rememberMe: credentials.rememberMe || false
       };
-      console.log('AuthenticationService: Prepared API request for:', loginRequest.email);
 
-      // Call API
-      console.log('AuthenticationService: Calling authApiService.login...');
-      const result = await this.authApiService.login(loginRequest);
-      console.log('AuthenticationService: API call completed, result success:', result.isSuccess);
-
-      if (result.isFailure) {
-        console.error('AuthenticationService: API call failed:', result.error.message);
-        return Result.failure(
-          new BusinessError('Login failed', 'LOGIN_ERROR', result.error.message)
-        );
-      }
-
-      console.log('AuthenticationService: API call successful, processing response...');
-      const authResponse = result.value;
-      console.log('AuthenticationService: Auth response user:', authResponse.user);
+      console.log('🔐 AuthenticationService: Attempting secure login...');
       
+      // Try secure endpoint first
       try {
-        let authUser: AuthUser;
-        
-        // Now we should have proper user info from the mapped response
-        if (authResponse.user) {
-          console.log('AuthenticationService: User info found in response, mapping...');
-          authUser = this.mapUserInfoToAuthUser(authResponse.user);
-          console.log('AuthenticationService: User mapping successful:', authUser.email);
-        } else {
-          console.log('AuthenticationService: No user info in response, trying to extract from token...');
-          
-          // Fallback: try to get user info from the stored token
-          const tokenUser = this.getCurrentUserFromToken();
-          
-          if (tokenUser) {
-            console.log('AuthenticationService: Successfully extracted user from token:', tokenUser.email);
-            authUser = tokenUser;
-          } else {
-            console.log('AuthenticationService: Could not extract user from token, creating minimal user object...');
+        const response = await fetch(`${this.baseURL}/api/auth/secure/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(loginRequest)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ AuthenticationService: Secure login successful');
+
+          if (data.success && data.data) {
+            const authUser = this.mapServerResponseToAuthUser(data.data);
             
-            // Final fallback: create minimal user object
-            authUser = {
-              userId: 0,
-              email: credentials.email.toLowerCase(),
-              firstName: '',
-              lastName: '',
-              fullName: credentials.email.split('@')[0],
-              role: 'Member',
-              isActive: true,
-              createdAt: new Date().toISOString()
-            };
-            
-            console.warn('AuthenticationService: Using minimal user object - user info incomplete');
+            return Result.success({
+              user: authUser,
+              isAuthenticated: true
+            });
           }
+        } else if (response.status === 404) {
+          console.log('⚠️ AuthenticationService: Secure endpoint not found, falling back to old endpoint');
+          throw new Error('Secure endpoint not available');
         }
+
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error?.message || errorData.message || 'Login failed';
         
-        const authResult = {
-          user: authUser,
-          isAuthenticated: true
-        };
+        return Result.failure(new BusinessError('Login failed', 'LOGIN_ERROR', errorMessage));
+
+      } catch (secureError) {
+        console.log('⚠️ AuthenticationService: Secure login failed, trying fallback to old endpoint');
         
-        console.log('AuthenticationService: Login process completed successfully');
-        console.log('AuthenticationService: Final user object:', {
-          userId: authUser.userId,
-          email: authUser.email,
-          fullName: authUser.fullName,
-          role: authUser.role
-        });
-        
-        return Result.success(authResult);
-        
-      } catch (mappingError) {
-        console.error('AuthenticationService: User processing failed:', mappingError);
-        
-        // Even if user mapping fails, if we have valid tokens, we can still proceed
-        // with a minimal user object
-        const minimalUser: AuthUser = {
-          userId: 0,
-          email: credentials.email.toLowerCase(),
-          firstName: '',
-          lastName: '',
-          fullName: credentials.email.split('@')[0],
-          role: 'Member',
-          isActive: true,
-          createdAt: new Date().toISOString()
-        };
-        
-        console.warn('AuthenticationService: Using fallback minimal user due to mapping error');
-        
-        return Result.success({
-          user: minimalUser,
-          isAuthenticated: true
-        });
+        // Fallback to old endpoint
+        try {
+          const fallbackResponse = await fetch(`${this.baseURL}/api/auth/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(loginRequest)
+          });
+
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json();
+            console.log('✅ AuthenticationService: Fallback login successful');
+
+            if (fallbackData.success && fallbackData.data) {
+              const authUser = this.mapServerResponseToAuthUser(fallbackData.data);
+              
+              // Store token in localStorage for fallback compatibility
+              if (fallbackData.data.token) {
+                localStorage.setItem('library_access_token', fallbackData.data.token);
+              }
+              
+              return Result.success({
+                user: authUser,
+                isAuthenticated: true
+              });
+            }
+          }
+
+          const fallbackErrorData = await fallbackResponse.json().catch(() => ({}));
+          const fallbackErrorMessage = fallbackErrorData.error?.message || 'Login failed';
+          
+          return Result.failure(new BusinessError('Login failed', 'LOGIN_ERROR', fallbackErrorMessage));
+
+        } catch (fallbackError) {
+          console.error('❌ AuthenticationService: Both secure and fallback login failed');
+          return Result.failure(new BusinessError('Login failed', 'LOGIN_ERROR', 'Unable to authenticate'));
+        }
       }
 
     } catch (error: any) {
-      console.error('AuthenticationService: Unexpected error during login:', error);
-      console.error('AuthenticationService: Error stack:', error.stack);
+      console.error('❌ AuthenticationService: Unexpected error during login:', error);
       return Result.failure(
         new BusinessError('Unexpected error during login', 'UNKNOWN_ERROR', error.message || error)
       );
@@ -166,24 +159,20 @@ export class AuthenticationService {
   }
 
   /**
-   * Register new user - Updated for backend response handling
+   * SECURE Register - With fallback
    */
   async register(userData: RegisterData): Promise<Result<AuthenticationResult, BusinessError>> {
     try {
-      console.log('AuthenticationService: Starting registration process for:', userData.email);
+      console.log('🔐 AuthenticationService: Starting registration for:', userData.email);
       
-      // Validate input
       const validation = this.validationService.validateRegistrationData(userData);
       if (!validation.isValid) {
-        console.log('AuthenticationService: Registration validation failed:', validation.errors);
         return Result.failure(
           new ValidationError(validation.errors.join(', '), 'userData', userData)
         );
       }
-      console.log('AuthenticationService: Registration validation passed');
 
-      // Prepare API request
-      const registerRequest: RegisterRequest = {
+      const registerRequest = {
         firstName: userData.firstName.trim(),
         lastName: userData.lastName.trim(),
         email: userData.email.trim().toLowerCase(),
@@ -191,101 +180,61 @@ export class AuthenticationService {
         confirmPassword: userData.confirmPassword,
         role: userData.role
       };
-      console.log('AuthenticationService: Prepared registration request for:', registerRequest.email);
 
-      // Call API
-      console.log('AuthenticationService: Calling authApiService.register...');
-      const result = await this.authApiService.register(registerRequest);
-      console.log('AuthenticationService: Registration API call completed, result success:', result.isSuccess);
-
-      if (result.isFailure) {
-        console.error('AuthenticationService: Registration API call failed:', result.error.message);
-        return Result.failure(
-          new BusinessError('Registration failed', 'REGISTRATION_ERROR', result.error.message)
-        );
-      }
-
-      console.log('AuthenticationService: Registration API call successful, processing response...');
-      const authResponse = result.value;
-      console.log('AuthenticationService: Registration response user:', authResponse.user);
-
+      // Try secure endpoint first, fallback to old endpoint
       try {
-        let authUser: AuthUser;
-        
-        // Process user info from registration response
-        if (authResponse.user) {
-          console.log('AuthenticationService: User info found in registration response, mapping...');
-          authUser = this.mapUserInfoToAuthUser(authResponse.user);
-          console.log('AuthenticationService: Registration user mapping successful:', authUser.email);
-        } else {
-          console.log('AuthenticationService: No user info in registration response, trying to extract from token...');
-          
-          // Fallback: try to get user info from the stored token
-          const tokenUser = this.getCurrentUserFromToken();
-          
-          if (tokenUser) {
-            console.log('AuthenticationService: Successfully extracted registration user from token:', tokenUser.email);
-            authUser = tokenUser;
-          } else {
-            console.log('AuthenticationService: Could not extract registration user from token, creating user object from registration data...');
-            
-            // Use registration data to create user object
-            authUser = {
-              userId: 0, // Will be updated when we get actual user ID
-              email: userData.email.toLowerCase(),
-              firstName: userData.firstName,
-              lastName: userData.lastName,
-              fullName: `${userData.firstName} ${userData.lastName}`.trim(),
-              role: userData.role,
-              isActive: true,
-              createdAt: new Date().toISOString()
-            };
-            
-            console.log('AuthenticationService: Created user object from registration data');
+        const response = await fetch('/api/auth/secure/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(registerRequest)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            const authUser = this.mapServerResponseToAuthUser(data.data);
+            return Result.success({
+              user: authUser,
+              isAuthenticated: true
+            });
           }
         }
-        
-        const authResult = {
-          user: authUser,
-          isAuthenticated: true
-        };
-        
-        console.log('AuthenticationService: Registration process completed successfully');
-        console.log('AuthenticationService: Final registration user object:', {
-          userId: authUser.userId,
-          email: authUser.email,
-          fullName: authUser.fullName,
-          role: authUser.role
-        });
-        
-        return Result.success(authResult);
-        
-      } catch (mappingError) {
-        console.error('AuthenticationService: Registration user processing failed:', mappingError);
-        
-        // Fallback with registration data
-        const fallbackUser: AuthUser = {
-          userId: 0,
-          email: userData.email.toLowerCase(),
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          fullName: `${userData.firstName} ${userData.lastName}`.trim(),
-          role: userData.role,
-          isActive: true,
-          createdAt: new Date().toISOString()
-        };
-        
-        console.warn('AuthenticationService: Using fallback user from registration data due to mapping error');
-        
-        return Result.success({
-          user: fallbackUser,
-          isAuthenticated: true
-        });
+      } catch (secureError) {
+        console.log('⚠️ Using fallback registration endpoint');
       }
 
+      // Fallback to old endpoint
+      const fallbackResponse = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(registerRequest)
+      });
+
+      if (fallbackResponse.ok) {
+        const data = await fallbackResponse.json();
+        if (data.success && data.data) {
+          const authUser = this.mapServerResponseToAuthUser(data.data);
+          
+          // Store token for fallback compatibility
+          if (data.data.token) {
+            localStorage.setItem('library_access_token', data.data.token);
+          }
+          
+          return Result.success({
+            user: authUser,
+            isAuthenticated: true
+          });
+        }
+      }
+
+      return Result.failure(new BusinessError('Registration failed', 'REGISTRATION_ERROR'));
+
     } catch (error: any) {
-      console.error('AuthenticationService: Unexpected error during registration:', error);
-      console.error('AuthenticationService: Registration error stack:', error.stack);
       return Result.failure(
         new BusinessError('Unexpected error during registration', 'UNKNOWN_ERROR', error.message || error)
       );
@@ -293,116 +242,172 @@ export class AuthenticationService {
   }
 
   /**
-   * Logout current user
+   * SECURE Logout - With fallback
    */
   async logout(): Promise<Result<void, BusinessError>> {
     try {
-      console.log('AuthenticationService: Starting logout process');
-      await this.authApiService.logout();
-      console.log('AuthenticationService: Logout completed successfully');
+      console.log('🔐 AuthenticationService: Starting logout');
+      
+      // Try secure logout first
+      try {
+        await fetch('/api/auth/secure/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+      } catch (secureError) {
+        console.log('⚠️ Secure logout failed, using fallback');
+      }
+
+      // Clear localStorage (for fallback compatibility)
+      localStorage.removeItem('library_access_token');
+      localStorage.removeItem('library_refresh_token');
+      localStorage.removeItem('library_token_type');
+      localStorage.removeItem('library_expires_at');
+      
+      console.log('✅ AuthenticationService: Logout completed');
       return Result.success(undefined);
     } catch (error) {
-      console.warn('AuthenticationService: Logout API call failed, but clearing local tokens anyway');
-      // Even if API call fails, we consider logout successful locally
+      console.warn('⚠️ AuthenticationService: Logout API failed, but considering successful locally');
       return Result.success(undefined);
     }
   }
 
   /**
-   * Refresh authentication token
-   */
-  async refreshAuthentication(): Promise<Result<AuthenticationResult, BusinessError>> {
-    try {
-      console.log('AuthenticationService: Starting token refresh');
-      const result = await this.authApiService.refreshToken();
-
-      if (result.isFailure) {
-        console.error('AuthenticationService: Token refresh failed:', result.error.message);
-        return Result.failure(
-          new BusinessError('Token refresh failed', 'REFRESH_ERROR', result.error.message)
-        );
-      }
-
-      const authResponse = result.value;
-      console.log('AuthenticationService: Token refresh successful');
-      
-      let authUser: AuthUser;
-      
-      if (authResponse.user) {
-        authUser = this.mapUserInfoToAuthUser(authResponse.user);
-      } else {
-        // Try to get from token or create minimal user
-        authUser = this.getCurrentUserFromToken() || {
-          userId: 0,
-          email: 'unknown@email.com',
-          firstName: '',
-          lastName: '',
-          fullName: 'Unknown User',
-          role: 'Member',
-          isActive: true,
-          createdAt: new Date().toISOString()
-        };
-      }
-
-      return Result.success({
-        user: authUser,
-        isAuthenticated: true
-      });
-
-    } catch (error) {
-      console.error('AuthenticationService: Unexpected error during token refresh:', error);
-      return Result.failure(
-        new BusinessError('Unexpected error during token refresh', 'UNKNOWN_ERROR', error)
-      );
-    }
-  }
-
-  /**
-   * Get current authenticated user
+   * SECURE Get Current User - With fallback
    */
   async getCurrentUser(): Promise<Result<AuthUser | null, BusinessError>> {
     try {
-      if (!this.isAuthenticated()) {
-        console.log('AuthenticationService: User not authenticated');
-        return Result.success(null);
-      }
+      console.log('🔐 AuthenticationService: Getting current user');
+      
+      // Try secure endpoint first
+      try {
+        const response = await fetch('/api/auth/secure/me', {
+          method: 'GET',
+          credentials: 'include'
+        });
 
-      console.log('AuthenticationService: Getting current user from API');
-      const result = await this.authApiService.getCurrentUser();
-
-      if (result.isFailure) {
-        console.warn('AuthenticationService: Failed to get user from API, trying token fallback');
-        
-        // Fallback to token-based user info
-        const tokenUser = this.getCurrentUserFromToken();
-        if (tokenUser) {
-          console.log('AuthenticationService: Successfully got user from token fallback');
-          return Result.success(tokenUser);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            const authUser = this.mapServerResponseToAuthUser(data.data);
+            return Result.success(authUser);
+          }
         }
-        
-        return Result.failure(
-          new BusinessError('Failed to get current user', 'USER_FETCH_ERROR', result.error.message)
-        );
+      } catch (secureError) {
+        console.log('⚠️ Secure getCurrentUser failed, using fallback');
       }
 
-      const authUser = this.mapUserInfoToAuthUser(result.value);
-      console.log('AuthenticationService: Successfully got current user from API');
-      return Result.success(authUser);
+      // Fallback: Try old endpoint with token
+      const token = localStorage.getItem('library_access_token');
+      if (token) {
+        try {
+          const response = await fetch('/api/auth/me', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
 
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data) {
+              const authUser = this.mapServerResponseToAuthUser(data.data);
+              return Result.success(authUser);
+            }
+          }
+        } catch (fallbackError) {
+          console.log('⚠️ Fallback getCurrentUser also failed');
+        }
+      }
+
+      return Result.success(null);
     } catch (error) {
-      console.error('AuthenticationService: Unexpected error while getting current user:', error);
-      return Result.failure(
-        new BusinessError('Unexpected error while getting current user', 'UNKNOWN_ERROR', error)
-      );
+      console.error('❌ AuthenticationService: Error getting current user:', error);
+      return Result.failure(new BusinessError('Unexpected error while getting current user', 'UNKNOWN_ERROR', error));
     }
   }
 
   /**
-   * Change user password
+   * SECURE Authentication Check - With fallback
+   */
+  async isAuthenticated(): Promise<boolean> {
+    try {
+      // Try secure verification first
+      try {
+        const response = await fetch('/api/auth/secure/verify', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          return true;
+        }
+      } catch (secureError) {
+        console.log('⚠️ Secure auth check failed, using fallback');
+      }
+
+      // Fallback: Check localStorage token
+      const token = localStorage.getItem('library_access_token');
+      if (token) {
+        try {
+          // Try to decode token to check if it's valid
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]));
+            const now = Math.floor(Date.now() / 1000);
+            return payload.exp > now;
+          }
+        } catch (tokenError) {
+          console.log('⚠️ Token validation failed');
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('❌ AuthenticationService: Authentication check failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * SECURE Token Refresh - With fallback
+   */
+  async refreshAuthentication(): Promise<Result<AuthenticationResult, BusinessError>> {
+    try {
+      console.log('🔐 AuthenticationService: Refreshing authentication');
+      
+      // Try secure refresh first
+      try {
+        const response = await fetch('/api/auth/secure/refresh', {
+          method: 'POST',
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            const authUser = this.mapServerResponseToAuthUser(data.data);
+            return Result.success({
+              user: authUser,
+              isAuthenticated: true
+            });
+          }
+        }
+      } catch (secureError) {
+        console.log('⚠️ Secure refresh failed');
+      }
+
+      return Result.failure(new BusinessError('Token refresh failed', 'REFRESH_ERROR'));
+    } catch (error) {
+      return Result.failure(new BusinessError('Unexpected error during token refresh', 'UNKNOWN_ERROR', error));
+    }
+  }
+
+  /**
+   * Change password
    */
   async changePassword(passwordData: ChangePasswordRequest): Promise<Result<void, BusinessError>> {
     try {
-      // Validate input
       const validation = this.validationService.validatePasswordChange(passwordData);
       if (!validation.isValid) {
         return Result.failure(
@@ -410,20 +415,22 @@ export class AuthenticationService {
         );
       }
 
-      const result = await this.authApiService.changePassword(passwordData);
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(passwordData)
+      });
 
-      if (result.isFailure) {
-        return Result.failure(
-          new BusinessError('Password change failed', 'PASSWORD_CHANGE_ERROR', result.error.message)
-        );
+      if (response.ok) {
+        return Result.success(undefined);
       }
 
-      return Result.success(undefined);
-
+      return Result.failure(new BusinessError('Password change failed', 'PASSWORD_CHANGE_ERROR'));
     } catch (error) {
-      return Result.failure(
-        new BusinessError('Unexpected error during password change', 'UNKNOWN_ERROR', error)
-      );
+      return Result.failure(new BusinessError('Unexpected error during password change', 'UNKNOWN_ERROR', error));
     }
   }
 
@@ -432,7 +439,6 @@ export class AuthenticationService {
    */
   async requestPasswordReset(email: string): Promise<Result<void, BusinessError>> {
     try {
-      // Validate email
       const validation = this.validationService.validateEmail(email);
       if (!validation.isValid) {
         return Result.failure(
@@ -440,158 +446,37 @@ export class AuthenticationService {
         );
       }
 
-      const result = await this.authApiService.requestPasswordReset(email.trim().toLowerCase());
-
-      if (result.isFailure) {
-        return Result.failure(
-          new BusinessError('Password reset request failed', 'PASSWORD_RESET_REQUEST_ERROR', result.error.message)
-        );
-      }
-
-      return Result.success(undefined);
-
-    } catch (error) {
-      return Result.failure(
-        new BusinessError('Unexpected error during password reset request', 'UNKNOWN_ERROR', error)
-      );
-    }
-  }
-
-  /**
-   * Check if user is currently authenticated
-   */
-  isAuthenticated(): boolean {
-    return TokenService.isAuthenticated();
-  }
-
-  /**
-   * Get current user from stored token (synchronous) - Enhanced for backend JWT format
-   */
-  getCurrentUserFromToken(): AuthUser | null {
-    const decodedToken = TokenService.getCurrentUser();
-    if (!decodedToken) {
-      console.log('AuthenticationService: No decoded token available');
-      return null;
-    }
-
-    try {
-      console.log('AuthenticationService: Mapping token to AuthUser...');
-      console.log('AuthenticationService: Token name field:', decodedToken.name);
-      console.log('AuthenticationService: Token given_name:', decodedToken.given_name);
-      console.log('AuthenticationService: Token family_name:', decodedToken.family_name);
-      
-      // Extract individual name parts for proper mapping
-      const firstName = decodedToken.given_name || 
-                       decodedToken.name?.split(' ')[0] || 
-                       '';
-      const lastName = decodedToken.family_name || 
-                      decodedToken.name?.split(' ').slice(1).join(' ') || 
-                      '';
-      
-      // Use the full name that was properly extracted by TokenService
-      const fullName = decodedToken.name || 
-                      `${firstName} ${lastName}`.trim() ||
-                      decodedToken.email ||
-                      'Unknown User';
-
-      const authUser: AuthUser = {
-        userId: decodedToken.userId || 0,
-        email: decodedToken.email || 'unknown@email.com',
-        firstName: firstName,
-        lastName: lastName,
-        fullName: fullName, // This should now be "Soshan Wijayarathne"
-        role: decodedToken.role || 'Member',
-        isActive: true,
-        createdAt: new Date(decodedToken.iat * 1000).toISOString()
-      };
-
-      console.log('AuthenticationService: Final AuthUser mapping:', {
-        email: authUser.email,
-        firstName: authUser.firstName,
-        lastName: authUser.lastName,
-        fullName: authUser.fullName,
-        role: authUser.role
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email.trim().toLowerCase() })
       });
-      
-      return authUser;
+
+      if (response.ok) {
+        return Result.success(undefined);
+      }
+
+      return Result.failure(new BusinessError('Password reset request failed', 'PASSWORD_RESET_REQUEST_ERROR'));
     } catch (error) {
-      console.error('AuthenticationService: Error mapping token to user:', error);
-      return null;
+      return Result.failure(new BusinessError('Unexpected error during password reset request', 'UNKNOWN_ERROR', error));
     }
   }
 
   /**
-   * Check if token needs refresh
+   * Map server response to AuthUser
    */
-  needsTokenRefresh(): boolean {
-    return TokenService.isTokenExpired();
-  }
-
-  /**
-   * Clear authentication state
-   */
-  clearAuthentication(): void {
-    console.log('AuthenticationService: Clearing authentication state');
-    TokenService.clearTokens();
-  }
-
-  /**
-   * Map API UserInfo to domain AuthUser - Updated to preserve role from token
-   */
-  private mapUserInfoToAuthUser(userInfo: UserInfo): AuthUser {
-    try {
-      console.log('AuthenticationService: Mapping user info:', userInfo);
-      
-      if (!userInfo) {
-        throw new Error('UserInfo is null or undefined');
-      }
-
-      // Get role from token FIRST, then check server response
-      const tokenUser = this.getCurrentUserFromToken();
-      let userRole = 'Member'; // Default fallback
-      
-      // Priority 1: Use role from token (most reliable)
-      if (tokenUser && tokenUser.role) {
-        userRole = tokenUser.role;
-        console.log('AuthenticationService: Using role from token:', userRole);
-      }
-      
-      // Priority 2: If server provides role, use it (but validate it's not empty/Member when token says otherwise)
-      if (userInfo.role && userInfo.role !== 'Member') {
-        userRole = userInfo.role;
-        console.log('AuthenticationService: Using role from server:', userRole);
-      } else if (userInfo.role === 'Member' && tokenUser?.role && tokenUser.role !== 'Member') {
-        // Server says Member but token says something else - trust the token
-        userRole = tokenUser.role;
-        console.log('AuthenticationService: Server says Member but token says', tokenUser.role, '- trusting token');
-      }
-
-      console.log('AuthenticationService: Final determined role:', userRole);
-
-      // Handle the mapped user info from your backend
-      const authUser: AuthUser = {
-        userId: userInfo.userId || (tokenUser?.userId) || 0,
-        email: userInfo.email || (tokenUser?.email) || 'unknown@email.com',
-        firstName: userInfo.firstName || '',
-        lastName: userInfo.lastName || '',
-        fullName: userInfo.fullName || 
-                 `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim() || 
-                 (tokenUser?.fullName) ||
-                 userInfo.email || 
-                 'Unknown User',
-        role: userRole, // Use the carefully determined role
-        isActive: userInfo.isActive !== false,
-        createdAt: userInfo.createdAt || new Date().toISOString()
-      };
-
-      console.log('AuthenticationService: Mapped auth user with preserved role:', authUser);
-      console.log('AuthenticationService: FINAL ROLE CHECK:', authUser.role);
-      return authUser;
-      
-    } catch (error) {
-      console.error('AuthenticationService: User mapping error:', error);
-      console.error('AuthenticationService: Input userInfo:', userInfo);
-      throw new Error(`Failed to map user info: ${error}`);
-    }
+  private mapServerResponseToAuthUser(serverData: any): AuthUser {
+    return {
+      userId: serverData.userId || serverData.id || 0,
+      email: serverData.email || '',
+      firstName: serverData.firstName || serverData.fullName?.split(' ')[0] || '',
+      lastName: serverData.lastName || serverData.fullName?.split(' ').slice(1).join(' ') || '',
+      fullName: serverData.fullName || `${serverData.firstName || ''} ${serverData.lastName || ''}`.trim() || serverData.email || 'Unknown User',
+      role: serverData.role || 'Member',
+      isActive: serverData.isActive !== false,
+      createdAt: serverData.createdAt || new Date().toISOString()
+    };
   }
 }

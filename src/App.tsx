@@ -10,9 +10,9 @@ import { getContainer } from './shared/container/containerSetup';
 import { configureDependencies } from './infrastructure/container/DependencyConfiguration';
 import { SERVICE_KEYS } from './shared/container/ServiceKeys';
 
-// Authentication
+// SECURE Authentication
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import { SecureProtectedRoute } from './components/SecureProtectedRoute'; // CHANGED
 
 // Layout Components
 import { DashboardLayout } from './components/templates/DashboardLayout';
@@ -64,10 +64,12 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     try {
+      console.log('App: Starting secure logout...');
       await logout();
+      console.log('App: Secure logout completed, redirecting to login');
       navigate('/login');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('App: Logout error:', error);
     }
   };
 
@@ -91,11 +93,11 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   if (isLoading) {
-    return <LoadingState message="Loading..." />;
+    return <LoadingState message="Loading user session..." />;
   }
 
   if (!user) {
-    return <LoadingState message="Loading user data..." />;
+    return <LoadingState message="Verifying authentication..." />;
   }
 
   return (
@@ -136,7 +138,7 @@ function AuthenticatedApp() {
   const { isAuthenticated, isInitialized, user } = useAuth();
 
   if (!isInitialized) {
-    return <LoadingState message="Initializing application..." />;
+    return <LoadingState message="Initializing secure authentication..." />;
   }
 
   return (
@@ -164,11 +166,11 @@ function AuthenticatedApp() {
         } 
       />
 
-      {/* Protected Routes */}
+      {/* SECURE Protected Routes */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       
       <Route path="/dashboard" element={
-        <ProtectedRoute>
+        <SecureProtectedRoute>
           <AppLayout>
             <DashboardPage 
               user={user ? {
@@ -178,79 +180,78 @@ function AuthenticatedApp() {
               } : undefined}
             />
           </AppLayout>
-        </ProtectedRoute>
+        </SecureProtectedRoute>
       } />
 
-      {/* Books Routes - Protected and with role-based access */}
+      {/* SECURE Books Routes - Server-verified permissions */}
       <Route path="/books" element={
-        <ProtectedRoute resource="books" action="read">
+        <SecureProtectedRoute resource="books" action="read">
           <AppLayout>
             <BooksPageContainer />
           </AppLayout>
-        </ProtectedRoute>
+        </SecureProtectedRoute>
       } />
 
       <Route path="/books/add" element={
-        <ProtectedRoute resource="books" action="create">
+        <SecureProtectedRoute resource="books" action="create">
           <AppLayout>
             <CreateBookPageContainer />
           </AppLayout>
-        </ProtectedRoute>
+        </SecureProtectedRoute>
       } />
 
       <Route path="/books/:id" element={
-        <ProtectedRoute resource="books" action="read">
+        <SecureProtectedRoute resource="books" action="read">
           <AppLayout>
             <BookDetailsPageContainer />
           </AppLayout>
-        </ProtectedRoute>
+        </SecureProtectedRoute>
       } />
 
-      {/* Remove edit route since there's no edit endpoint */}
-
-      {/* Members Routes - Protected and with role-based access */}
+      {/* SECURE Members Routes - Server-verified permissions */}
       <Route path="/members" element={
-        <ProtectedRoute resource="members" action="read">
+        <SecureProtectedRoute resource="members" action="read">
           <AppLayout>
             <MembersPageContainer />
           </AppLayout>
-        </ProtectedRoute>
+        </SecureProtectedRoute>
       } />
 
       <Route path="/members/add" element={
-        <ProtectedRoute resource="members" action="create">
+        <SecureProtectedRoute resource="members" action="create">
           <AppLayout>
             <CreateMemberPageContainer />
           </AppLayout>
-        </ProtectedRoute>
+        </SecureProtectedRoute>
       } />
 
       <Route path="/members/:id" element={
-        <ProtectedRoute resource="members" action="read">
+        <SecureProtectedRoute resource="members" action="read">
           <AppLayout>
             <MemberDetailsPageContainer />
           </AppLayout>
-        </ProtectedRoute>
+        </SecureProtectedRoute>
       } />
 
-      {/* Borrowing Routes - Simplified */}
+      {/* SECURE Borrowing Routes */}
       <Route path="/borrowing" element={<Navigate to="/borrowing/borrow" replace />} />
 
       <Route path="/borrowing/borrow" element={
-        <ProtectedRoute resource="borrowing" action="borrow">
+        <SecureProtectedRoute resource="borrowing" action="create">
           <AppLayout>
             <BorrowBookPageContainer />
           </AppLayout>
-        </ProtectedRoute>
+        </SecureProtectedRoute>
       } />
 
       <Route path="/borrowing/return" element={
-        <ProtectedRoute resource="borrowing" action="borrow">
+        <SecureProtectedRoute resource="borrowing" action="create">
           <AppLayout>
             <ReturnBookPageContainer />
           </AppLayout>
-        </ProtectedRoute>
+        </SecureProtectedRoute>
       } />
+
       {/* Catch all - redirect to dashboard if authenticated, login if not */}
       <Route path="*" element={
         isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
@@ -271,7 +272,6 @@ function AppWithContainer() {
     const configureDeps = async () => {
       try {
         console.log('Configuring dependencies...');
-        // Update this line to support state parameter
         configureDependencies(container, (path: string | number, options?: { state?: any }) => {
           if (typeof path === 'string' && options?.state) {
             navigate(path, options);
@@ -298,13 +298,12 @@ function AppWithContainer() {
     }
 
     try {
-      console.log('Resolving AuthenticationService...');
+      console.log('Resolving SECURE AuthenticationService...');
       const service = container.resolve(SERVICE_KEYS.AUTHENTICATION_SERVICE);
-      console.log('AuthenticationService resolved successfully');
+      console.log('SECURE AuthenticationService resolved successfully');
       return service;
     } catch (error: any) {
       console.error('Failed to resolve AuthenticationService:', error);
-      console.error('Available services in container:', Object.keys(container));
       setConfigError(`Failed to resolve AuthenticationService: ${error.message}`);
       return null;
     }
@@ -314,6 +313,7 @@ function AppWithContainer() {
   React.useEffect(() => {
     if (import.meta.env.DEV) {
       (window as any).container = container;
+      console.log('Container available at window.container for debugging');
     }
   }, [container]);
 
@@ -323,8 +323,8 @@ function AppWithContainer() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Initializing Application</h2>
-          <p className="text-gray-600">Setting up services...</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Initializing Secure Application</h2>
+          <p className="text-gray-600">Setting up secure services...</p>
         </div>
       </div>
     );
@@ -336,14 +336,14 @@ function AppWithContainer() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            <h2 className="text-xl font-bold mb-2">Application Error</h2>
-            <p className="text-sm">{configError || 'Failed to initialize authentication service'}</p>
+            <h2 className="text-xl font-bold mb-2">Secure Application Error</h2>
+            <p className="text-sm">{configError || 'Failed to initialize secure authentication service'}</p>
           </div>
           <button 
             onClick={() => window.location.reload()}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
-            Retry
+            Retry Initialization
           </button>
         </div>
       </div>

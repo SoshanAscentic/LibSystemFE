@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { AuthenticationService, AuthUser, LoginCredentials, RegisterData } from '../domain/services/Auth/AuthenticationService';
 import { ControllerResult } from '../shared/interfaces/common';
-import { TokenService } from '@/infrastructure/services/TokenService';
 
 // Auth State Types
 interface AuthState {
@@ -147,7 +146,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
   }
 }
 
-// Permission mappings
+// SECURE Permission mappings
 const ROLE_PERMISSIONS: Record<string, { resources: string[]; actions: string[] }> = {
   Member: {
     resources: ['books', 'borrowing'],
@@ -179,76 +178,30 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children, authService }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Refresh authentication - MOVED UP before initializeAuth
-  const refreshAuth = React.useCallback(async (): Promise<void> => {
-    console.log('AuthProvider: Refreshing auth...');
-    try {
-      if (authService.needsTokenRefresh()) {
-        const result = await authService.refreshAuthentication();
-        
-        if (result.isSuccess) {
-          console.log('AuthProvider: Token refresh successful');
-          dispatch({ type: 'REFRESH_TOKEN_SUCCESS', payload: { user: result.value.user } });
-        } else {
-          console.log('AuthProvider: Token refresh failed');
-          dispatch({ type: 'LOGOUT_SUCCESS' });
-        }
-      }
-    } catch (error) {
-      console.error('AuthProvider: Refresh auth error:', error);
-      dispatch({ type: 'LOGOUT_SUCCESS' });
-    }
-  }, [authService]);
-
-  // Initialize authentication state - WITH ROLE PRESERVATION
+  // SECURE: Initialize authentication - Always verify with server
   const initializeAuth = React.useCallback(async () => {
-    console.log('AuthProvider: Starting auth initialization...');
+    console.log('AuthProvider: Starting SECURE auth initialization...');
     dispatch({ type: 'AUTH_INIT_START' });
 
     try {
-      // First, check if we have any tokens
-      const hasTokens = TokenService.getAccessToken() && TokenService.getRefreshToken();
+      // SECURITY FIX: ALWAYS verify with server, never trust client-side data
+      console.log('AuthProvider: Verifying authentication with server...');
       
-      if (!hasTokens) {
-        console.log('AuthProvider: No tokens found');
-        dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: null } });
-        return;
-      }
-
-      if (authService.isAuthenticated()) {
-        console.log('AuthProvider: User appears authenticated, getting user from token...');
+      // Check if user is authenticated via secure endpoint
+      const isAuth = await authService.isAuthenticated();
+      
+      if (isAuth) {
+        console.log('AuthProvider: User is authenticated, getting current user...');
         
-        // Try to get current user from token first (fast)
-        const tokenUser = authService.getCurrentUserFromToken();
+        // Get current user data from server (always fresh from DB)
+        const result = await authService.getCurrentUser();
         
-        if (tokenUser) {
-          console.log('AuthProvider: Got user from token:', tokenUser.email, 'with role:', tokenUser.role);
-          
-          // If token user has a non-Member role, trust it completely
-          // Skip server verification that causes role to be lost
-          if (tokenUser.role && tokenUser.role !== 'Member') {
-            console.log('AuthProvider: Token has privileged role, skipping server verification to preserve role');
-            dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: tokenUser } });
-            return; // Exit early - don't call server
-          }
-          
-          // Only for Member role or missing role, verify with server
-          dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: tokenUser } });
-          
-          try {
-            console.log('AuthProvider: Verifying Member role with server...');
-            const result = await authService.getCurrentUser();
-            if (result.isSuccess && result.value) {
-              console.log('AuthProvider: Server verification successful for Member');
-              dispatch({ type: 'REFRESH_TOKEN_SUCCESS', payload: { user: result.value } });
-            }
-          } catch (error) {
-            console.log('AuthProvider: Server verification failed, keeping token user');
-            // Keep the token user - already dispatched above
-          }
+        if (result.isSuccess && result.value) {
+          console.log('AuthProvider: Server verification successful for user:', result.value.email);
+          dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: result.value } });
         } else {
-          console.log('AuthProvider: No valid token user, trying refresh...');
-          await refreshAuth();
+          console.log('AuthProvider: Server verification failed');
+          dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: null } });
         }
       } else {
         console.log('AuthProvider: User not authenticated');
@@ -256,14 +209,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, authServic
       }
     } catch (error) {
       console.error('AuthProvider: Auth initialization failed:', error);
-      authService.clearAuthentication();
       dispatch({ type: 'AUTH_INIT_SUCCESS', payload: { user: null } });
     }
-  }, [authService, refreshAuth]);
+  }, [authService]);
+
+  // SECURE: Refresh authentication
+  const refreshAuth = React.useCallback(async (): Promise<void> => {
+    console.log('AuthProvider: Refreshing auth...');
+    try {
+      const result = await authService.refreshAuthentication();
+      
+      if (result.isSuccess) {
+        console.log('AuthProvider: Token refresh successful');
+        dispatch({ type: 'REFRESH_TOKEN_SUCCESS', payload: { user: result.value.user } });
+      } else {
+        console.log('AuthProvider: Token refresh failed');
+        dispatch({ type: 'LOGOUT_SUCCESS' });
+      }
+    } catch (error) {
+      console.error('AuthProvider: Refresh auth error:', error);
+      dispatch({ type: 'LOGOUT_SUCCESS' });
+    }
+  }, [authService]);
 
   // Initialize authentication on mount
   React.useEffect(() => {
-    console.log('AuthProvider: Initializing authentication...');
+    console.log('AuthProvider: Initializing secure authentication...');
     initializeAuth();
   }, [initializeAuth]);
 
@@ -279,64 +250,64 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, authServic
     });
   }, [state.isAuthenticated, state.isInitialized, state.isLoading, state.user?.email, state.user?.role, state.error]);
 
-  // Login function
+  // SECURE Login function
   const login = React.useCallback(async (credentials: LoginCredentials): Promise<ControllerResult> => {
-    console.log('AuthProvider: Starting login...', credentials.email);
+    console.log('AuthProvider: Starting secure login...', credentials.email);
     dispatch({ type: 'LOGIN_START' });
 
     try {
       const result = await authService.login(credentials);
 
       if (result.isSuccess) {
-        console.log('AuthProvider: Login successful:', result.value.user.email);
+        console.log('AuthProvider: Secure login successful:', result.value.user.email);
         dispatch({ type: 'LOGIN_SUCCESS', payload: { user: result.value.user } });
         return ControllerResult.success(result.value.user);
       } else {
-        console.log('AuthProvider: Login failed:', result.error.message);
+        console.log('AuthProvider: Secure login failed:', result.error.message);
         dispatch({ type: 'LOGIN_FAILURE', payload: { error: result.error.message } });
         return ControllerResult.failure(result.error.message);
       }
     } catch (error: any) {
-      console.error('AuthProvider: Login error:', error);
+      console.error('AuthProvider: Secure login error:', error);
       const errorMessage = error.message || 'Login failed';
       dispatch({ type: 'LOGIN_FAILURE', payload: { error: errorMessage } });
       return ControllerResult.failure(errorMessage);
     }
   }, [authService]);
 
-  // Register function
+  // SECURE Register function
   const register = React.useCallback(async (userData: RegisterData): Promise<ControllerResult> => {
-    console.log('AuthProvider: Starting registration...', userData.email);
+    console.log('AuthProvider: Starting secure registration...', userData.email);
     dispatch({ type: 'REGISTER_START' });
 
     try {
       const result = await authService.register(userData);
 
       if (result.isSuccess) {
-        console.log('AuthProvider: Registration successful:', result.value.user.email);
+        console.log('AuthProvider: Secure registration successful:', result.value.user.email);
         dispatch({ type: 'REGISTER_SUCCESS', payload: { user: result.value.user } });
         return ControllerResult.success(result.value.user);
       } else {
-        console.log('AuthProvider: Registration failed:', result.error.message);
+        console.log('AuthProvider: Secure registration failed:', result.error.message);
         dispatch({ type: 'REGISTER_FAILURE', payload: { error: result.error.message } });
         return ControllerResult.failure(result.error.message);
       }
     } catch (error: any) {
-      console.error('AuthProvider: Registration error:', error);
+      console.error('AuthProvider: Secure registration error:', error);
       const errorMessage = error.message || 'Registration failed';
       dispatch({ type: 'REGISTER_FAILURE', payload: { error: errorMessage } });
       return ControllerResult.failure(errorMessage);
     }
   }, [authService]);
 
-  // Logout function
+  // SECURE Logout function
   const logout = React.useCallback(async (): Promise<void> => {
-    console.log('AuthProvider: Starting logout...');
+    console.log('AuthProvider: Starting secure logout...');
     try {
       await authService.logout();
-      console.log('AuthProvider: Logout successful');
+      console.log('AuthProvider: Secure logout successful');
     } catch (error) {
-      console.error('AuthProvider: Logout error:', error);
+      console.error('AuthProvider: Secure logout error:', error);
     } finally {
       dispatch({ type: 'LOGOUT_SUCCESS' });
     }
@@ -347,7 +318,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, authServic
     dispatch({ type: 'CLEAR_ERROR' });
   }, []);
 
-  // Permission utilities
+  // Permission utilities (client-side hints only, server always validates)
   const hasRole = React.useCallback((role: string): boolean => {
     return state.user?.role === role;
   }, [state.user?.role]);
@@ -381,7 +352,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, authServic
     refreshAuth,
     clearError,
 
-    // Utilities
+    // Utilities (client-side hints only)
     hasRole,
     hasAnyRole,
     canAccess,

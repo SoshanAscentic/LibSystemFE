@@ -1,5 +1,4 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { TokenService } from '../services/TokenService';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -41,23 +40,30 @@ export class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 30000, // 30 second timeout
+      withCredentials: true, // CHANGED: Enable httpOnly cookies
+      timeout: 30000,
     });
 
     this.setupInterceptors();
   }
 
   private setupInterceptors(): void {
-    // Request interceptor to add auth token
+    // SECURE Request interceptor - No manual token handling needed
     this.client.interceptors.request.use(
       (config) => {
-        const authHeader = TokenService.getAuthorizationHeader();
-        if (authHeader) {
-          config.headers.Authorization = authHeader;
-        }
+        // REMOVED: Manual Authorization header setup
+        // httpOnly cookies are sent automatically by the browser
         
         // Add request ID for tracing
         config.headers['X-Request-ID'] = this.generateRequestId();
+        
+        // Add CSRF token if available (for POST/PUT/DELETE requests)
+        if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() || '')) {
+          const csrfToken = this.getCSRFToken();
+          if (csrfToken) {
+            config.headers['X-CSRF-TOKEN'] = csrfToken;
+          }
+        }
         
         return config;
       },
@@ -66,7 +72,7 @@ export class ApiClient {
       }
     );
 
-    // Response interceptor for error handling and token refresh
+    // SECURE Response interceptor for error handling and token refresh
     this.client.interceptors.response.use(
       (response) => {
         return response;
@@ -91,27 +97,24 @@ export class ApiClient {
           this.isRefreshing = true;
 
           try {
-            // Try to refresh the token
-            const refreshResult = await this.refreshToken();
+            // CHANGED: Use secure refresh endpoint
+            console.log('ApiClient: Attempting secure token refresh');
+            const refreshResult = await this.refreshTokenSecure();
             
             if (refreshResult.success) {
-              // Process the failed queue
+              console.log('ApiClient: Secure token refresh successful');
               this.processQueue(null);
               
-              // Retry the original request with new token
-              const authHeader = TokenService.getAuthorizationHeader();
-              if (authHeader) {
-                originalRequest.headers!.Authorization = authHeader;
-              }
-              
+              // Retry the original request (cookies are updated automatically)
               return this.client(originalRequest);
             } else {
-              // Refresh failed, redirect to login
+              console.log('ApiClient: Secure token refresh failed');
               this.processQueue(refreshResult.error);
               this.redirectToLogin();
               return Promise.reject(error);
             }
           } catch (refreshError) {
+            console.error('ApiClient: Secure refresh error:', refreshError);
             this.processQueue(refreshError);
             this.redirectToLogin();
             return Promise.reject(error);
@@ -122,14 +125,11 @@ export class ApiClient {
 
         // Handle other error status codes
         if (error.response?.status === 403) {
-          // Forbidden - insufficient permissions
-          console.error('Access forbidden - insufficient permissions');
+          console.error('ApiClient: Access forbidden - insufficient permissions');
         } else if (error.response?.status === 404) {
-          // Not found
-          console.error('Resource not found');
+          console.error('ApiClient: Resource not found');
         } else if (error.response?.status && error.response.status >= 500) {
-          // Server errors
-          console.error('Server error occurred');
+          console.error('ApiClient: Server error occurred');
         }
 
         return Promise.reject(error);
@@ -137,47 +137,60 @@ export class ApiClient {
     );
   }
 
-  private async refreshToken(): Promise<{ success: boolean; error?: any }> {
+  /**
+   * SECURE: Refresh tokens using httpOnly cookies
+   */
+  private async refreshTokenSecure(): Promise<{ success: boolean; error?: any }> {
     try {
-      const refreshToken = TokenService.getRefreshToken();
+      console.log('ApiClient: Starting secure token refresh');
       
-      if (!refreshToken) {
-        return { success: false, error: new Error('No refresh token available') };
-      }
-
       // Use a separate axios instance to avoid interceptor loops
       const refreshClient = axios.create({
         baseURL: this.client.defaults.baseURL,
         headers: {
           'Content-Type': 'application/json',
         },
+        withCredentials: true, // Include httpOnly cookies
       });
 
-      const response = await refreshClient.post('/api/auth/refresh', {
-        refreshToken
-      });
+      const response = await refreshClient.post('/api/auth/secure/refresh');
 
       if (response.data.success) {
-        const authData = response.data.data;
-        
-        // Store new tokens
-        const tokenData = {
-          accessToken: authData.accessToken,
-          refreshToken: authData.refreshToken,
-          expiresAt: Date.now() + (authData.expiresIn * 1000),
-          tokenType: authData.tokenType
-        };
-        
-        TokenService.storeTokens(tokenData);
-        
+        console.log('ApiClient: Secure token refresh successful');
+        // Tokens are automatically updated in httpOnly cookies by the server
         return { success: true };
       } else {
-        TokenService.clearTokens();
+        console.log('ApiClient: Secure token refresh failed - invalid response');
         return { success: false, error: new Error('Token refresh failed') };
       }
     } catch (error) {
-      TokenService.clearTokens();
+      console.error('ApiClient: Secure token refresh request failed:', error);
       return { success: false, error };
+    }
+  }
+
+  /**
+   * Get CSRF token from cookie (if using CSRF protection)
+   */
+  private getCSRFToken(): string | null {
+    try {
+      const name = 'CSRF-TOKEN=';
+      const decodedCookie = decodeURIComponent(document.cookie);
+      const ca = decodedCookie.split(';');
+      
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') {
+          c = c.substring(1);
+        }
+        if (c.indexOf(name) === 0) {
+          return c.substring(name.length, c.length);
+        }
+      }
+      return null;
+    } catch (error) {
+      console.warn('⚠️ ApiClient: Failed to get CSRF token:', error);
+      return null;
     }
   }
 
@@ -194,8 +207,7 @@ export class ApiClient {
   }
 
   private redirectToLogin(): void {
-    // Clear tokens
-    TokenService.clearTokens();
+    console.log('ApiClient: Redirecting to login due to authentication failure');
     
     // Redirect to login page
     if (window.location.pathname !== '/login') {
@@ -207,7 +219,7 @@ export class ApiClient {
     return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  // HTTP Methods
+  // HTTP Methods (unchanged)
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<ApiResponse<T>>> {
     return this.client.get(url, config);
   }
@@ -228,7 +240,7 @@ export class ApiClient {
     return this.client.delete(url, config);
   }
 
-  // Upload file
+  // Upload file (unchanged)
   async upload<T>(url: string, file: File, config?: AxiosRequestConfig): Promise<AxiosResponse<ApiResponse<T>>> {
     const formData = new FormData();
     formData.append('file', file);
@@ -242,7 +254,7 @@ export class ApiClient {
     });
   }
 
-  // Download file
+  // Download file (unchanged)
   async download(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<Blob>> {
     return this.client.get(url, {
       ...config,
@@ -250,7 +262,7 @@ export class ApiClient {
     });
   }
 
-  // Health check
+  // SECURE Health check
   async healthCheck(): Promise<boolean> {
     try {
       const response = await this.client.get('/api/health');
@@ -260,12 +272,12 @@ export class ApiClient {
     }
   }
 
-  // Set custom header
+  // Set custom header (unchanged)
   setHeader(key: string, value: string): void {
     this.client.defaults.headers.common[key] = value;
   }
 
-  // Remove custom header
+  // Remove custom header (unchanged)
   removeHeader(key: string): void {
     delete this.client.defaults.headers.common[key];
   }
@@ -273,5 +285,15 @@ export class ApiClient {
   // Get current configuration
   getConfig() {
     return this.client.defaults;
+  }
+
+  // SECURE: Check authentication status
+  async checkAuthStatus(): Promise<boolean> {
+    try {
+      const response = await this.client.get('/api/auth/secure/verify');
+      return response.status === 200;
+    } catch (error) {
+      return false;
+    }
   }
 }
