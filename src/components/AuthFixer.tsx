@@ -1,5 +1,5 @@
 import React from 'react';
-import { AuthDebugTools } from '../utils/authDebug';
+import { AuthDebugTools } from '../utils/authDebugUtils';
 
 export const AuthFixer: React.FC = () => {
   React.useEffect(() => {

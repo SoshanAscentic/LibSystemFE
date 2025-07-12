@@ -1,8 +1,9 @@
+// src/components/molecules/QuickActions.tsx - Fixed with proper navigation
 import * as React from "react"
 import { useNavigate } from "react-router-dom"
-import { Button } from "@/components/atoms/Button"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/molecules/Card"
-import { BookOpen, Users, RotateCcw, Plus, Search, BarChart3, UserPlus } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { BookOpen, Users, RotateCcw, Plus, Search, BarChart3, UserPlus, ArrowLeft, ArrowRight } from "lucide-react"
 import { toast } from "sonner"
 
 export interface QuickAction {
@@ -34,46 +35,55 @@ export function QuickActions({
   const navigate = useNavigate()
 
   const handleAddBook = () => {
+    console.log('QuickActions: Navigating to add book page');
     navigate('/books/add')
   }
 
   const handleSearchBooks = () => {
+    console.log('QuickActions: Navigating to books page');
     navigate('/books')
   }
 
   const handleBorrowBook = () => {
-    // TODO: Navigate to borrowing page when implemented
-    toast.info('Borrow Book feature coming in Phase 6!')
+    console.log('QuickActions: Navigating to borrow book page');
+    navigate('/borrowing/borrow')
   }
 
   const handleReturnBook = () => {
-    // TODO: Navigate to return page when implemented  
-    toast.info('Return Book feature coming in Phase 6!')
+    console.log('QuickActions: Navigating to return book page');
+    navigate('/borrowing/return')
   }
 
   const handleAddMember = () => {
-    // TODO: Navigate to add member page when implemented
-    toast.info('Add Member feature coming in Phase 5!')
+    console.log('QuickActions: Navigating to add member page');
+    navigate('/members/add')
+  }
+
+  const handleViewMembers = () => {
+    console.log('QuickActions: Navigating to members page');
+    navigate('/members')
   }
 
   const handleViewAnalytics = () => {
     // TODO: Navigate to analytics page when implemented
-    toast.info('Analytics feature coming in Phase 8!')
+    toast.info('Analytics Dashboard', { 
+      description: 'Analytics feature coming soon in Phase 8!'
+    })
   }
   
   const actions: QuickAction[] = [
     {
       id: 'search-books',
       label: 'Browse Books',
-      description: '',
-      icon: <Search className="w-5 h-5 flex-shrink-0" />,
+      description: 'Search and explore our book collection',
+      icon: <BookOpen className="w-5 h-5 flex-shrink-0" />,
       variant: 'default',
       onClick: handleSearchBooks
     },
     {
       id: 'add-book',
       label: 'Add Book',
-      description: '',
+      description: 'Add a new book to the library',
       icon: <Plus className="w-5 h-5 flex-shrink-0" />,
       variant: 'outline',
       onClick: handleAddBook,
@@ -82,37 +92,37 @@ export function QuickActions({
     {
       id: 'borrow-book',
       label: 'Borrow Book',
-      description: '',
-      icon: <RotateCcw className="w-5 h-5 flex-shrink-0" />,
+      description: 'Borrow a book from the library',
+      icon: <ArrowRight className="w-5 h-5 flex-shrink-0" />,
       variant: 'secondary',
       onClick: handleBorrowBook
     },
     {
       id: 'return-book', 
       label: 'Return Book',
-      description: '',
-      icon: <RotateCcw className="w-5 h-5 flex-shrink-0" />,
+      description: 'Return a borrowed book',
+      icon: <ArrowLeft className="w-5 h-5 flex-shrink-0" />,
       variant: 'outline',
       onClick: handleReturnBook
     },
     {
+      id: 'view-members',
+      label: 'View Members',
+      description: 'Browse library members',
+      icon: <Users className="w-5 h-5 flex-shrink-0" />,
+      variant: 'secondary',
+      onClick: handleViewMembers,
+      roles: ['MinorStaff', 'ManagementStaff', 'Administrator']
+    },
+    {
       id: 'add-member',
       label: 'Add Member',
-      description: '',
+      description: 'Register a new library member',
       icon: <UserPlus className="w-5 h-5 flex-shrink-0" />,
-      variant: 'secondary',
+      variant: 'outline',
       onClick: handleAddMember,
       roles: ['Administrator']
     },
-    {
-      id: 'view-analytics',
-      label: 'View Analytics',
-      description: '',
-      icon: <BarChart3 className="w-5 h-5 flex-shrink-0" />,
-      variant: 'outline',
-      onClick: handleViewAnalytics,
-      roles: ['MinorStaff', 'ManagementStaff', 'Administrator']
-    }
   ]
 
   const hasPermission = (roles?: string[]) => {
@@ -126,7 +136,7 @@ export function QuickActions({
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Plus className="w-5 h-5 flex-shrink-0" />
+          <RotateCcw className="w-5 h-5 flex-shrink-0" />
           <span className="truncate">Quick Actions</span>
         </CardTitle>
       </CardHeader>
@@ -136,7 +146,7 @@ export function QuickActions({
             <Button
               key={action.id}
               variant={action.variant}
-              className="h-auto p-4 flex flex-col items-start text-left gap-2 min-w-0"
+              className="h-auto p-4 flex flex-col items-start text-left gap-2 min-w-0 hover:scale-105 transition-transform"
               onClick={action.onClick}
               disabled={action.disabled}
             >
@@ -144,9 +154,11 @@ export function QuickActions({
                 {action.icon}
                 <span className="font-medium truncate">{action.label}</span>
               </div>
-              <span className="text-xs text-muted-foreground text-left leading-relaxed">
-                {action.description}
-              </span>
+              {action.description && (
+                <span className="text-xs text-muted-foreground text-left leading-relaxed">
+                  {action.description}
+                </span>
+              )}
             </Button>
           ))}
         </div>

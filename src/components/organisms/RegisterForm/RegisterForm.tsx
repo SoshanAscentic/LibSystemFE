@@ -181,7 +181,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           <option value="Member">Regular Member</option>
           <option value="MinorStaff">Minor Staff</option>
           <option value="ManagementStaff">Management Staff</option>
-          <option value="Administrator">Administrator</option>
         </select>
         <p className="mt-1 text-sm text-gray-500">
           Select the appropriate role for this member

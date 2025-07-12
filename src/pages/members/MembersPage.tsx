@@ -13,6 +13,7 @@ import { cn } from '../../lib/utils';
 import { useMembers } from '../../presentation/hooks/Members/useMembers';
 import { useUserPermissions } from '../../hooks/useUserPermissions'; 
 import { PermissionGate } from '../../components/PermissionGate';
+
 type ViewMode = 'grid' | 'table';
 type ModalType = 'add' | 'view' | null;
 

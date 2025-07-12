@@ -19,9 +19,7 @@ export function getMemberTypeLabel(memberType: string | number): string {
     'MinorStaff': 'Minor Staff',
     'ManagementStaff': 'Management Staff',
     'Administrator': 'Administrator',
-    'Member': 'Regular Member',        // Handle role names as well
-    'MinorStaff': 'Minor Staff',
-    'ManagementStaff': 'Management Staff'
+    'Member': 'Regular Member', 
   };
   
   return labels[memberType] || memberType;
