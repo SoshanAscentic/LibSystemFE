@@ -1,9 +1,7 @@
 import React from 'react';
 import { CreateMemberPage } from '../../../pages/members/CreateMemberPage';
-import { useMembersController } from '../../hooks/Members/useMembersController';
 
+// Simple container - no controller needed since we're using auth service directly
 export const CreateMemberPageContainer: React.FC = () => {
-  const controller = useMembersController();
-  
-  return <CreateMemberPage controller={controller} />;
+  return <CreateMemberPage />;
 };
