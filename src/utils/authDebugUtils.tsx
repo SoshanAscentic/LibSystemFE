@@ -15,7 +15,7 @@ export class AuthDebugUtility {
     recommendations: string[];
     details: any;
   }> {
-    console.group('🔍 COMPREHENSIVE AUTH SYSTEM CHECK');
+    console.group('COMPREHENSIVE AUTH SYSTEM CHECK');
     
     const issues: string[] = [];
     const recommendations: string[] = [];
@@ -23,7 +23,7 @@ export class AuthDebugUtility {
 
     try {
       // 1. Check token existence and validity
-      console.log('📋 Step 1: Checking token existence...');
+      console.log('Step 1: Checking token existence...');
       const tokenInfo = this.checkTokens();
       details.tokens = tokenInfo;
       
@@ -33,7 +33,7 @@ export class AuthDebugUtility {
       }
 
       // 2. Check token decoding
-      console.log('📋 Step 2: Checking token decoding...');
+      console.log('Step 2: Checking token decoding...');
       const decodingInfo = this.checkTokenDecoding();
       details.decoding = decodingInfo;
       
@@ -48,7 +48,7 @@ export class AuthDebugUtility {
       }
 
       // 3. Check authentication service state
-      console.log('📋 Step 3: Checking authentication service...');
+      console.log('Step 3: Checking authentication service...');
       const authServiceInfo = await this.checkAuthenticationService();
       details.authService = authServiceInfo;
       
@@ -58,7 +58,7 @@ export class AuthDebugUtility {
       }
 
       // 4. Check server connectivity
-      console.log('📋 Step 4: Checking server connectivity...');
+      console.log('Step 4: Checking server connectivity...');
       const serverInfo = await this.checkServerConnectivity();
       details.server = serverInfo;
       
@@ -68,7 +68,7 @@ export class AuthDebugUtility {
       }
 
       // 5. Check localStorage integrity
-      console.log('📋 Step 5: Checking localStorage integrity...');
+      console.log('Step 5: Checking localStorage integrity...');
       const storageInfo = this.checkStorageIntegrity();
       details.storage = storageInfo;
       
@@ -78,17 +78,17 @@ export class AuthDebugUtility {
       }
 
       // 6. Generate summary
-      let summary = '✅ Authentication system appears healthy';
+      let summary = 'Authentication system appears healthy';
       if (issues.length > 0) {
-        summary = `❌ Found ${issues.length} issue(s) with authentication system`;
+        summary = `Found ${issues.length} issue(s) with authentication system`;
       }
 
-      console.log('📊 Auth Check Summary:', summary);
-      console.log('🚨 Issues Found:', issues);
-      console.log('💡 Recommendations:', recommendations);
+      console.log('Auth Check Summary:', summary);
+      console.log('Issues Found:', issues);
+      console.log('Recommendations:', recommendations);
 
     } catch (error) {
-      console.error('❌ Auth check failed:', error);
+      console.error('Auth check failed:', error);
       issues.push(`Auth check failed: ${error}`);
       recommendations.push('Contact support with debug logs');
     }
@@ -96,7 +96,7 @@ export class AuthDebugUtility {
     console.groupEnd();
 
     return {
-      summary: issues.length === 0 ? '✅ Authentication system healthy' : `❌ ${issues.length} issues found`,
+      summary: issues.length === 0 ? 'Authentication system healthy' : `${issues.length} issues found`,
       issues,
       recommendations,
       details
@@ -376,7 +376,7 @@ export class AuthDebugUtility {
    * Emergency auth reset
    */
   static emergencyAuthReset(): void {
-    console.warn('🚨 EMERGENCY AUTH RESET - Clearing all authentication data');
+    console.warn('EMERGENCY AUTH RESET - Clearing all authentication data');
     
     try {
       // Clear all auth-related localStorage items
@@ -400,11 +400,11 @@ export class AuthDebugUtility {
         }
       });
 
-      console.log('✅ Emergency auth reset completed');
-      console.log('🔄 Please refresh the page and log in again');
+      console.log('Emergency auth reset completed');
+      console.log('Please refresh the page and log in again');
       
     } catch (error) {
-      console.error('❌ Emergency auth reset failed:', error);
+      console.error('Emergency auth reset failed:', error);
     }
   }
 
@@ -449,7 +449,7 @@ ${JSON.stringify(fullCheck.details, null, 2)}
    * Real-time auth monitoring
    */
   static startAuthMonitoring(): () => void {
-    console.log('🔍 Starting real-time auth monitoring...');
+    console.log('Starting real-time auth monitoring...');
     
     let lastRole: string | null = null;
     let lastAuthState: boolean | null = null;
@@ -463,7 +463,7 @@ ${JSON.stringify(fullCheck.details, null, 2)}
         
         // Check for role changes
         if (lastRole !== currentRole) {
-          console.warn('🚨 ROLE CHANGE DETECTED:', {
+          console.warn('ROLE CHANGE DETECTED:', {
             from: lastRole,
             to: currentRole,
             timestamp: new Date().toISOString(),
@@ -474,7 +474,7 @@ ${JSON.stringify(fullCheck.details, null, 2)}
 
         // Check for auth state changes
         if (lastAuthState !== isAuthenticated) {
-          console.warn('🚨 AUTH STATE CHANGE DETECTED:', {
+          console.warn('AUTH STATE CHANGE DETECTED:', {
             from: lastAuthState,
             to: isAuthenticated,
             timestamp: new Date().toISOString()
@@ -484,7 +484,7 @@ ${JSON.stringify(fullCheck.details, null, 2)}
 
         // Check for role-related issues
         if (isAuthenticated && !currentRole) {
-          console.error('🚨 AUTHENTICATED USER HAS NO ROLE!', {
+          console.error('AUTHENTICATED USER HAS NO ROLE!', {
             isAuthenticated,
             user: currentUser,
             timestamp: new Date().toISOString()
@@ -504,7 +504,7 @@ ${JSON.stringify(fullCheck.details, null, 2)}
     
     // Return cleanup function
     return () => {
-      console.log('🔍 Stopping auth monitoring');
+      console.log('Stopping auth monitoring');
       clearInterval(interval);
     };
   }
@@ -513,8 +513,8 @@ ${JSON.stringify(fullCheck.details, null, 2)}
 // Make available globally in development
 if (typeof window !== 'undefined' && import.meta.env.DEV) {
   (window as any).authDebug = AuthDebugUtility;
-  console.log('🔧 Auth debugging tools available at window.authDebug');
-  console.log('📋 Available methods:');
+  console.log('Auth debugging tools available at window.authDebug');
+  console.log('Available methods:');
   console.log('  • window.authDebug.performFullAuthCheck() - Complete system check');
   console.log('  • window.authDebug.validateCurrentRole() - Check current role validity');
   console.log('  • window.authDebug.generateAuthReport() - Generate detailed report');

@@ -203,9 +203,9 @@ export function Sidebar({
         <Button
           variant={isItemActive ? "secondary" : "ghost"}
           className={cn(
-            "w-full justify-start gap-3 text-left h-10 px-3",
+            "w-full justify-start gap-3 text-left h-10 px-3 cursor-pointer",
             level > 0 && "ml-6 w-auto",
-            !isItemActive && "text-black",
+            !isItemActive && "text-black hover:bg-gray-100",
             isItemActive && "bg-[var(--color-secondary-light)] text-[var(--color-secondary)] border-r-2 border-[var(--color-secondary)]"
           )}
           onClick={() => {
@@ -245,23 +245,34 @@ export function Sidebar({
   }
 
   return (
-    <div className={cn("p-4 space-y-2 h-full", className)}>
-      <div className="space-y-1">
-        {menuItems.map(item => renderMenuItem(item))}
-      </div>
+    <div className={cn(
+      // Fixed positioning and scrolling
+      "fixed left-0 top-0 z-40 h-screen w-64 bg-white border-r border-gray-200",
+      // Proper scroll container
+      "flex flex-col",
+      className
+    )}>
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+        <div className="p-4 space-y-2">
+          <div className="space-y-1">
+            {menuItems.map(item => renderMenuItem(item))}
+          </div>
 
-      <div className="pt-4 mt-6 border-t border-[var(--color-gray-200)]">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 px-3 text-black"
-          onClick={() => handleNavigation('/profile', false, 'Profile & Settings')}
-        >
-          <Settings className="w-5 h-5 flex-shrink-0 text-black" />
-          <span className="truncate">Profile & Settings</span>
-          <span className="text-xs bg-orange-100 text-orange-600 px-1 rounded">
-            Soon
-          </span>
-        </Button>
+          <div className="pt-4 mt-6 border-t border-[var(--color-gray-200)]">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 px-3 text-black cursor-pointer hover:bg-gray-100"
+              onClick={() => handleNavigation('/profile', false, 'Profile & Settings')}
+            >
+              <Settings className="w-5 h-5 flex-shrink-0 text-black" />
+              <span className="truncate">Profile & Settings</span>
+              <span className="text-xs bg-orange-100 text-orange-600 px-1 rounded">
+                Soon
+              </span>
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -130,14 +130,14 @@ const permissions = useUserPermissions();
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">👥 Members Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Members Management</h1>
           <p className="text-gray-600 mt-1">
             View and manage library members
           </p>
-          {/* SECURITY: Show user's permission level */}
+          {/* SECURITY: Show user's permission level
           <div className="text-xs text-gray-500 mt-1">
             Access Level: {permissions.canManageUsers ? '🔑 Administrator' : '👁️ View Only'}
-          </div>
+          </div> */}
         </div>
 
         <div className="flex items-center gap-3">
@@ -146,7 +146,7 @@ const permissions = useUserPermissions();
             requiredPermissions={['canManageUsers']}
             fallback={
               <div className="text-sm text-gray-500 italic">
-                👤 Only administrators can register new members
+                {/* 👤 Only administrators can register new members */}
               </div>
             }
           >

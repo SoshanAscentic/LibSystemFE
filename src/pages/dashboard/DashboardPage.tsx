@@ -1,4 +1,3 @@
-// src/pages/dashboard/DashboardPage.tsx
 import * as React from "react"
 import { StatsCard } from "@/components/molecules/StatsCard"
 import { RecentActivity, type ActivityItem } from "@/components/molecules/RecentActivity"
@@ -112,12 +111,6 @@ export function DashboardPage({ user }: DashboardPageProps) {
         <p className="text-[var(--color-gray-600)] text-sm sm:text-base">
           Here's what's happening in your library today.
         </p>
-        {/* Debug info for development - remove in production */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-2 text-xs text-gray-500">
-            Role: {userRole} | Email: {userEmail} | Stats loaded: ✅
-          </div>
-        )}
       </div>
 
       {/* Statistics Cards - Now Dynamic! */}
@@ -206,9 +199,6 @@ export function DashboardPage({ user }: DashboardPageProps) {
                   We're working on bringing you real-time updates about book borrowing, 
                   returns, and member activities. Stay tuned!
                 </p>
-                <div className="mt-4 text-xs text-gray-400">
-                  This feature requires additional backend endpoints for activity tracking
-                </div>
               </div>
             </div>
           </div>

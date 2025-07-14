@@ -75,7 +75,7 @@ export function QuickActions({
     {
       id: 'search-books',
       label: 'Browse Books',
-      description: 'Search and explore our book collection',
+      description: '',
       icon: <BookOpen className="w-5 h-5 flex-shrink-0" />,
       variant: 'default',
       onClick: handleSearchBooks
@@ -83,7 +83,7 @@ export function QuickActions({
     {
       id: 'add-book',
       label: 'Add Book',
-      description: 'Add a new book to the library',
+      description: '',
       icon: <Plus className="w-5 h-5 flex-shrink-0" />,
       variant: 'outline',
       onClick: handleAddBook,
@@ -92,7 +92,7 @@ export function QuickActions({
     {
       id: 'borrow-book',
       label: 'Borrow Book',
-      description: 'Borrow a book from the library',
+      description: '',
       icon: <ArrowRight className="w-5 h-5 flex-shrink-0" />,
       variant: 'secondary',
       onClick: handleBorrowBook
@@ -100,7 +100,7 @@ export function QuickActions({
     {
       id: 'return-book', 
       label: 'Return Book',
-      description: 'Return a borrowed book',
+      description: '',
       icon: <ArrowLeft className="w-5 h-5 flex-shrink-0" />,
       variant: 'outline',
       onClick: handleReturnBook
@@ -108,7 +108,7 @@ export function QuickActions({
     {
       id: 'view-members',
       label: 'View Members',
-      description: 'Browse library members',
+      description: '',
       icon: <Users className="w-5 h-5 flex-shrink-0" />,
       variant: 'secondary',
       onClick: handleViewMembers,
@@ -117,7 +117,7 @@ export function QuickActions({
     {
       id: 'add-member',
       label: 'Add Member',
-      description: 'Register a new library member',
+      description: '',
       icon: <UserPlus className="w-5 h-5 flex-shrink-0" />,
       variant: 'outline',
       onClick: handleAddMember,

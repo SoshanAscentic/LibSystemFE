@@ -36,7 +36,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Simplified Permissions
-  const permissions = useUserPermissions(); // CHANGED
+  const permissions = useUserPermissions(); 
 
   // Data hooks
   const { books, isLoading: booksLoading, refresh: refreshBooks } = useBooks(filters);
@@ -171,17 +171,10 @@ export const BooksPage: React.FC<BooksPageProps> = ({ controller }) => {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">📚 Book Library</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Book Library</h1>
           <p className="text-gray-600 mt-1">
             Manage your library's book collection
           </p>
-          {/* Debug info */}
-          <div className="text-xs text-gray-500 mt-1">
-            Access Level: {permissions.user?.role || 'Unknown'} | 
-            Add: {permissions.canAdd ? '✅' : '❌'} | 
-            Edit: {permissions.canEdit ? '✅' : '❌'} | 
-            Delete: {permissions.canDelete ? '✅' : '❌'}
-          </div>
         </div>
 
         <div className="flex items-center gap-3">

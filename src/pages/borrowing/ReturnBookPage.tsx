@@ -174,19 +174,13 @@ export const ReturnBookPage: React.FC<ReturnBookPageProps> = ({ controller }) =>
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Page Header */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={handleBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Return a Book</h1>
-          {!canSelectOtherMembers && selectedMember && (
-            <p className="text-sm text-gray-600">
-              Returning for: {selectedMember.fullName}
-            </p>
-          )}
+          <h1 className="text-3xl font-bold text-gray-900 ml-4">Return a Book</h1>
+          <p className="text-gray-600 mt-1">
+            {/* can add something here to make it look nice */}
+          </p>
         </div>
       </div>
 
@@ -212,7 +206,7 @@ export const ReturnBookPage: React.FC<ReturnBookPageProps> = ({ controller }) =>
                 className="mb-4"
               />
               
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="space-y-2 max-h-100 overflow-y-auto">
                 {filteredMembers.map((member) => (
                   <div
                     key={member.memberId}
