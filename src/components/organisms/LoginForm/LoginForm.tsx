@@ -77,7 +77,7 @@ export function LoginForm({
   const handleDemoLogin = () => {
     setFormData({
       email: "admin@library.com",
-      password: "admin123",
+      password: "Admin@5077",
       rememberMe: false
     })
     toast.info("Demo credentials filled", {
